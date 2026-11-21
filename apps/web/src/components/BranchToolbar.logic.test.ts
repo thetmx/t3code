@@ -1,4 +1,10 @@
-import { EnvironmentId, ProviderInstanceId, RunId, type VcsRef } from "@t3tools/contracts";
+import {
+  EnvironmentId,
+  GitCommandError,
+  ProviderInstanceId,
+  RunId,
+  type VcsRef,
+} from "@t3tools/contracts";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { dedupeRemoteBranchesWithLocalMatches } from "@t3tools/shared/git";
 import {
@@ -17,7 +23,24 @@ import {
   sanitizeNewRefName,
   shouldIncludeBranchPickerItem,
   isBranchHoldCurrent,
+  toBranchActionErrorMessage,
 } from "./BranchToolbar.logic";
+
+describe("toBranchActionErrorMessage", () => {
+  it("shows a Git failure's detail without the operation and cwd", () => {
+    const error = new GitCommandError({
+      operation: "GitVcsDriver.switchRef.checkout",
+      command: "git",
+      cwd: "/tmp/repo",
+      detail: "Commit, stash, or discard them, then switch again.",
+    });
+
+    expect(toBranchActionErrorMessage(error)).toBe(
+      "Commit, stash, or discard them, then switch again.",
+    );
+    expect(toBranchActionErrorMessage(new Error("boom"))).toBe("boom");
+  });
+});
 
 const localEnvironmentId = EnvironmentId.make("environment-local");
 const remoteEnvironmentId = EnvironmentId.make("environment-remote");

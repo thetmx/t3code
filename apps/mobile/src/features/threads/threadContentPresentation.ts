@@ -55,6 +55,7 @@ export function projectThreadContentPresentation(input: {
 export function threadSyncStatusLabel(
   status: EnvironmentThreadStatus,
   presentation: ThreadContentPresentation["kind"],
+  hasError: boolean,
   resolve: MessageResolver = m,
 ): string | null {
   if (
@@ -65,6 +66,8 @@ export function threadSyncStatusLabel(
   ) {
     return null;
   }
-  if (presentation === "ready") return resolve(msg("Syncing messages…"));
+  if (presentation === "ready") {
+    return hasError ? resolve(msg("Could not sync messages")) : resolve(msg("Syncing messages…"));
+  }
   return presentation === "loading" ? resolve(msg("Loading messages…")) : null;
 }

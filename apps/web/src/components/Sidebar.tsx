@@ -193,7 +193,6 @@ import {
   isThreadWokeUnseen,
   isTrailingDoubleClick,
   orderItemsByPreferredIds,
-  orderSidebarDraftIds,
   planSidebarThreadDrop,
   reduceSidebarProjectScopeMenuState,
   resolveAdjacentAttentionThreadId,
@@ -206,6 +205,7 @@ import {
   resolveThreadLastVisitedAt,
   searchSidebarThreads,
   shouldCreateNewThreadInCurrentProject,
+  resolveScopedNewThreadProjectRef,
   sidebarListItemId,
   sidebarThreadKeyAtY,
   sortInboxThreadsByReturn,
@@ -274,7 +274,7 @@ import {
   type SidebarProviderEntry,
   type SidebarSweepAction,
 } from "./sidebar/SidebarThreadRow";
-import { SidebarDraftBlock } from "./sidebar/SidebarDraftBlock";
+import { SidebarDraftBlock, useSidebarDrafts } from "./sidebar/SidebarDraftBlock";
 import {
   SidebarProjectFolderHeader,
   sidebarFolderRowId,
@@ -336,6 +336,7 @@ const sidebarProviderEntriesAtom = Atom.make((get) => {
 
 const EMPTY_PROVIDER_ENTRIES: ReadonlyMap<string, SidebarProviderEntry> = new Map();
 const EMPTY_THREADS: readonly EnvironmentThreadShell[] = [];
+const EMPTY_DRAFT_IDS: readonly DraftId[] = [];
 
 const SETTLED_TAIL_INITIAL_COUNT = 10;
 const SETTLED_TAIL_PAGE_COUNT = 25;
@@ -1466,13 +1467,22 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const settledThreadKeysRef = useRef(settledThreadKeys);
   const snoozedThreadKeysRef = useRef(snoozedThreadKeys);
 
+  const { draftIds, routeDraftComposer } = useSidebarDrafts(scopedProjectKeys, routeDraftIdForRows);
+  // Draft rows sit above the threads, so jumps and traversal reach them first.
+  // Search hides them, so they drop out while it is open.
+  const listedDraftIds = isSearchingThreads ? EMPTY_DRAFT_IDS : draftIds;
+  const draftIdByRowKey = new Map<string, DraftId>(listedDraftIds.map((id) => [`draft:${id}`, id]));
+  const orderedRowKeys = [...draftIdByRowKey.keys(), ...orderedThreadKeys];
+  const routeDraftRowKey = `draft:${routeDraftIdForRows}`;
+  const routeRowKey = draftIdByRowKey.has(routeDraftRowKey) ? routeDraftRowKey : routeRowThreadKey;
+
   const jumpLabelByKey = (() => {
     const mapping = new Map<string, string>();
-    for (const [index, threadKey] of orderedThreadKeys.entries()) {
+    for (const [index, rowKey] of orderedRowKeys.entries()) {
       const jumpCommand = threadJumpCommandForIndex(index);
       if (!jumpCommand) break;
       const label = shortcutLabelForCommand(keybindings, jumpCommand);
-      if (label) mapping.set(threadKey, label);
+      if (label) mapping.set(rowKey, label);
     }
     return mapping;
   })();
@@ -2894,59 +2904,49 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         platform: navigator.platform,
         context: threadShortcutContext(routeThreadRef),
       });
-      const navigateToThreadKey = (targetThreadKey: string | null) => {
-        if (!targetThreadKey) return false;
-        const targetThread = threadByKey.get(targetThreadKey);
-        if (!targetThread) return false;
+      const navigateToRowKey = (targetRowKey: string | null) => {
+        if (!targetRowKey) return false;
+        const targetDraftId = draftIdByRowKey.get(targetRowKey);
+        const targetThread = threadByKey.get(targetRowKey);
+        if (targetDraftId === undefined && !targetThread) return false;
         event.preventDefault();
         event.stopPropagation();
-        navigateToThread(scopeThreadRef(targetThread.environmentId, targetThread.id));
+        if (targetDraftId !== undefined) navigateToDraft(targetDraftId);
+        else if (targetThread)
+          navigateToThread(scopeThreadRef(targetThread.environmentId, targetThread.id));
         return true;
       };
       const traversalDirection = threadTraversalDirectionFromCommand(command);
       if (traversalDirection !== null) {
-        // Drafts sit above the thread rows, so they lead the cycle.
-        const draftKeys = orderSidebarDraftIds({
-          ...useComposerDraftStore.getState(),
-          scopedProjectKeys,
-          routeDraftId: routeDraftIdForRows,
-        }).map((draftId) => `draft:${draftId}`);
-        const target = resolveAdjacentThreadId({
-          threadIds: [...draftKeys, ...orderedThreadKeys],
-          currentThreadId:
-            routeRowThreadKey ??
-            (routeDraftIdForRows === null ? null : `draft:${routeDraftIdForRows}`),
-          direction: traversalDirection,
-          isUnseen: (threadKey) => {
-            const thread = threadByKey.get(threadKey);
-            if (
-              thread === undefined ||
-              settledThreadKeysRef.current.has(threadKey) ||
-              snoozedThreadKeysRef.current.has(threadKey)
-            ) {
-              return false;
-            }
-            const lastVisitedAt = resolveThreadLastVisitedAt(
-              thread.lastVisitedAt,
-              useUiStateStore.getState().threadLastVisitedAtById[threadKey],
-            );
-            return (
-              hasUnseenCompletion({ ...thread, lastVisitedAt }) ||
-              isThreadWokeUnseen({
-                wokeAt: threadWokeAt(thread, { now: new Date().toISOString() }),
-                lastVisitedAt,
-                settledOverride: thread.settledOverride,
-              })
-            );
-          },
-        });
-        if (target?.startsWith("draft:")) {
-          event.preventDefault();
-          event.stopPropagation();
-          navigateToDraft(DraftId.make(target.slice("draft:".length)));
-          return;
-        }
-        navigateToThreadKey(target);
+        navigateToRowKey(
+          resolveAdjacentThreadId({
+            threadIds: orderedRowKeys,
+            currentThreadId: routeRowKey,
+            direction: traversalDirection,
+            isUnseen: (threadKey) => {
+              const thread = threadByKey.get(threadKey);
+              if (
+                thread === undefined ||
+                settledThreadKeysRef.current.has(threadKey) ||
+                snoozedThreadKeysRef.current.has(threadKey)
+              ) {
+                return false;
+              }
+              const lastVisitedAt = resolveThreadLastVisitedAt(
+                thread.lastVisitedAt,
+                useUiStateStore.getState().threadLastVisitedAtById[threadKey],
+              );
+              return (
+                hasUnseenCompletion({ ...thread, lastVisitedAt }) ||
+                isThreadWokeUnseen({
+                  wokeAt: threadWokeAt(thread, { now: new Date().toISOString() }),
+                  lastVisitedAt,
+                  settledOverride: thread.settledOverride,
+                })
+              );
+            },
+          }),
+        );
         return;
       }
       const attentionDirection = threadAttentionTraversalDirectionFromCommand(command);
@@ -2967,33 +2967,53 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             );
           },
         });
-        if (!navigateToThreadKey(target)) {
+        if (!navigateToRowKey(target)) {
           toastManager.add({ type: "info", title: gt("No other threads need attention") });
         }
         return;
       }
       const jumpIndex = threadJumpIndexFromCommand(command ?? "");
       if (jumpIndex === null) return;
-      navigateToThreadKey(orderedThreadKeys[jumpIndex] ?? null);
+      navigateToRowKey(orderedRowKeys[jumpIndex] ?? null);
     };
     window.addEventListener("keydown", onWindowKeyDown);
     return () => window.removeEventListener("keydown", onWindowKeyDown);
   }, [
+    draftIdByRowKey,
     gt,
     keybindings,
-    navigateToThread,
     navigateToDraft,
+    navigateToThread,
+    orderedRowKeys,
     orderedThreadKeys,
-    routeDraftIdForRows,
+    routeRowKey,
     routeRowThreadKey,
     routeThreadRef,
-    scopedProjectKeys,
     threadByKey,
   ]);
 
   const showJumpHints = useThreadJumpHintsVisible(keybindings, routeThreadRef);
+  const draftJumpLabelById = showJumpHints
+    ? new Map(
+        listedDraftIds.flatMap((id) => {
+          const label = jumpLabelByKey.get(`draft:${id}`);
+          return label ? [[id, label] as const] : [];
+        }),
+      )
+    : null;
 
   const handleNewThreadClick = (event?: ReactMouseEvent) => {
+    const scopedProjectRef = resolveScopedNewThreadProjectRef({
+      shiftKey: event?.shiftKey ?? false,
+      // The folder sidebar's header button always opens the picker.
+      scopedProjectGroups: boringSidebarEnabled ? [] : scopedProjectGroups,
+      viewed: newThreadContext.activeThread ?? newThreadContext.activeDraftThread,
+    });
+    if (scopedProjectRef) {
+      if (isMobile) setOpenMobile(false);
+      void handleNewThread(scopedProjectRef);
+      return;
+    }
     if (
       shouldCreateNewThreadInCurrentProject(
         event?.shiftKey ?? false,
@@ -3568,9 +3588,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                       const items: ReactNode[] = [
                         <SidebarDraftBlock
                           key="draft-sessions"
+                          draftIds={draftIds}
+                          routeDraftComposer={routeDraftComposer}
+                          jumpLabelByDraftId={draftJumpLabelById}
                           projectByKey={projectByKey}
                           projectDisplayNameByKey={projectDisplayNameByKey}
-                          scopedProjectKeys={scopedProjectKeys}
                           routeDraftId={routeDraftIdForRows}
                           onNavigateToDraft={navigateToDraft}
                           onDraftContextMenu={handleDraftContextMenu}

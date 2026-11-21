@@ -929,6 +929,7 @@ const CONSOLE_FREE_GIT_READS = [
   "rev-parse --git-path index",
   "rev-parse --git-common-dir",
   "rev-parse --show-toplevel",
+  "rev-parse --git-common-dir --show-toplevel",
   "rev-parse --path-format=absolute --git-path index --git-common-dir --show-toplevel",
   "rev-parse --symbolic-full-name HEAD",
   "rev-parse --abbrev-ref --symbolic-full-name @{upstream}",
@@ -1137,10 +1138,12 @@ export const isImportedShellEnvName = (name: string): boolean =>
   !name.startsWith("ELECTRON_") &&
   !name.startsWith("VITE_") &&
   // T3 Code's own configuration comes from how the app was launched, except
-  // the telemetry opt-out, the GitHub app client, and the release mirror, which shell profiles set.
+  // the telemetry opt-out, the GitHub app client, the TanStack source, and the release mirror,
+  // which shell profiles set.
   (!name.startsWith("T3CODE_") ||
     name === "T3CODE_TELEMETRY_ENABLED" ||
     name === "T3CODE_GITHUB_APP_CLIENT_ID" ||
+    name === "T3CODE_TANSTACK_SOURCE" ||
     name === "T3CODE_RELEASE_BASE_URL");
 // Named patch fields the desktop sets through its own merge rules.
 const MERGED_SHELL_ENV_NAMES = new Set(["PATH", "LANG", "LC_ALL", "LC_CTYPE"]);
