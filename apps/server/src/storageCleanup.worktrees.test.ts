@@ -44,6 +44,7 @@ import * as TerminalManager from "./terminal/Manager.ts";
 import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
 import * as VcsDriverRegistry from "./vcs/VcsDriverRegistry.ts";
 import * as VcsProcess from "./vcs/VcsProcess.ts";
+import * as TaskFolders from "./workspace/TaskFolders.ts";
 
 const DAY_MS = 86_400_000;
 const projectId = ProjectId.make("project-1");
@@ -271,6 +272,8 @@ const sweepWorktree = (options: {
         Layer.mock(ProviderSessionManager.ProviderSessionManagerV2)({
           close: (id) => Effect.sync(() => closedSessions.push(id)),
         }),
+        // The project tracks no repositories, so its worktree is never a task folder.
+        Layer.mock(TaskFolders.TaskFolders)({ find: () => Effect.succeed(null) }),
       );
       const context = yield* Layer.build(StorageCleanup.layer).pipe(Effect.provide(fakes));
       const cleanup = Context.get(context, StorageCleanup.StorageCleanup);

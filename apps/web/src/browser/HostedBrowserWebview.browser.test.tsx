@@ -49,6 +49,7 @@ vi.mock(import("~/components/preview/previewBridge"), async (original) => ({
     closeTab: mocks.closeTab,
     registerWebview: mocks.registerWebview,
     getPreviewConfig: mocks.getPreviewConfig,
+    onStateChange: () => () => undefined,
   } as unknown as NonNullable<typeof previewBridge>,
 }));
 
