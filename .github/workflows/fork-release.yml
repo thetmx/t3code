@@ -5,9 +5,9 @@ name: Fork release
 #   - Triggered by pushing a `v*.*.*` tag (or workflow_dispatch), not on every
 #     push to main. macOS hosted runners bill at a real multiplier on
 #     a private repo, so routine pushes don't pay that cost.
-#   - No Clerk/Cloudflare/Vercel: those back the hosted web app and T3 Connect
-#     relay, not the update/install mechanism, so clerk_* and relay_url are
-#     passed empty and relay_client_tracing is disabled.
+#   - T3 Connect uses upstream's production Clerk instance and relay: the
+#     public clerk_* and relay_url values are read from .env.example and baked
+#     into every build. relay_client_tracing stays disabled.
 #   - No npm publish: `t3 update` pulls CLI archives straight from the GitHub
 #     Release (see packages/shared/src/cliRelease.ts), so npm is only needed
 #     for the initial `npx t3` bootstrap, which this fork does not provide.
@@ -52,6 +52,10 @@ jobs:
       tag: ${{ steps.resolve.outputs.tag }}
       previous_tag: ${{ steps.resolve.outputs.previous_tag }}
       ref: ${{ steps.resolve.outputs.ref }}
+      clerk_publishable_key: ${{ steps.public_config.outputs.clerk_publishable_key }}
+      clerk_jwt_template: ${{ steps.public_config.outputs.clerk_jwt_template }}
+      clerk_cli_oauth_client_id: ${{ steps.public_config.outputs.clerk_cli_oauth_client_id }}
+      relay_url: ${{ steps.public_config.outputs.relay_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -87,6 +91,25 @@ jobs:
           echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
           echo "ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
+      - id: public_config
+        name: Resolve T3 Connect public config
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=()
+          for name in CLERK_PUBLISHABLE_KEY CLERK_JWT_TEMPLATE CLERK_CLI_OAUTH_CLIENT_ID RELAY_URL; do
+            value="$(sed -n "s|^T3CODE_${name}=||p" .env.example)"
+            if [[ -z "$value" ]]; then
+              missing+=("T3CODE_${name}")
+            fi
+            echo "${name,,}=$value" >> "$GITHUB_OUTPUT"
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing T3 Connect config in .env.example: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
   build_bundle:
     name: Build JS bundle
     needs: [preflight]
@@ -94,10 +117,10 @@ jobs:
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 30
     env:
-      T3CODE_CLERK_PUBLISHABLE_KEY: ""
-      T3CODE_CLERK_JWT_TEMPLATE: ""
-      T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: ""
-      T3CODE_RELAY_URL: ""
+      T3CODE_CLERK_PUBLISHABLE_KEY: ${{ needs.preflight.outputs.clerk_publishable_key }}
+      T3CODE_CLERK_JWT_TEMPLATE: ${{ needs.preflight.outputs.clerk_jwt_template }}
+      T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: ${{ needs.preflight.outputs.clerk_cli_oauth_client_id }}
+      T3CODE_RELAY_URL: ${{ needs.preflight.outputs.relay_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -149,10 +172,10 @@ jobs:
       ref: ${{ needs.preflight.outputs.ref }}
       release_channel: stable
       relay_client_tracing: false
-      clerk_publishable_key: ""
-      clerk_jwt_template: ""
-      clerk_cli_oauth_client_id: ""
-      relay_url: ""
+      clerk_publishable_key: ${{ needs.preflight.outputs.clerk_publishable_key }}
+      clerk_jwt_template: ${{ needs.preflight.outputs.clerk_jwt_template }}
+      clerk_cli_oauth_client_id: ${{ needs.preflight.outputs.clerk_cli_oauth_client_id }}
+      relay_url: ${{ needs.preflight.outputs.relay_url }}
       label: Linux x64
       runner: blacksmith-32vcpu-ubuntu-2404
       platform: linux
@@ -172,10 +195,10 @@ jobs:
       ref: ${{ needs.preflight.outputs.ref }}
       release_channel: stable
       relay_client_tracing: false
-      clerk_publishable_key: ""
-      clerk_jwt_template: ""
-      clerk_cli_oauth_client_id: ""
-      relay_url: ""
+      clerk_publishable_key: ${{ needs.preflight.outputs.clerk_publishable_key }}
+      clerk_jwt_template: ${{ needs.preflight.outputs.clerk_jwt_template }}
+      clerk_cli_oauth_client_id: ${{ needs.preflight.outputs.clerk_cli_oauth_client_id }}
+      relay_url: ${{ needs.preflight.outputs.relay_url }}
       label: Linux arm64
       runner: blacksmith-16vcpu-ubuntu-2404-arm
       platform: linux
@@ -195,10 +218,10 @@ jobs:
       ref: ${{ needs.preflight.outputs.ref }}
       release_channel: stable
       relay_client_tracing: false
-      clerk_publishable_key: ""
-      clerk_jwt_template: ""
-      clerk_cli_oauth_client_id: ""
-      relay_url: ""
+      clerk_publishable_key: ${{ needs.preflight.outputs.clerk_publishable_key }}
+      clerk_jwt_template: ${{ needs.preflight.outputs.clerk_jwt_template }}
+      clerk_cli_oauth_client_id: ${{ needs.preflight.outputs.clerk_cli_oauth_client_id }}
+      relay_url: ${{ needs.preflight.outputs.relay_url }}
       label: macOS arm64
       runner: blacksmith-12vcpu-macos-26
       platform: mac
