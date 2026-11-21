@@ -18,6 +18,7 @@ import { msg } from "gt-react";
 
 import { m, type MessageResolver } from "../../i18n/messages";
 import {
+  formatBindingLabel,
   formatShortcutLabel,
   shortcutConflictKey,
   shortcutForContext,
@@ -318,12 +319,21 @@ export function buildKeybindingRows(
       const binding = keybindings[index]!;
       const when = whenAstToExpression(binding.whenAst);
       if (when === "false") continue;
-      const shortcut = shortcutForContext(binding, { composerRequiresModifier });
-      const key = shortcutConflictKey(shortcut, platform);
+      // The send preference only rewrites plain shortcuts; a chord fires as written.
+      const shortcut =
+        "shortcut" in binding ? shortcutForContext(binding, { composerRequiresModifier }) : null;
+      const key =
+        shortcut === null
+          ? binding.chord.map((step) => shortcutConflictKey(step, platform)).join(" ")
+          : shortcutConflictKey(shortcut, platform);
       const conditionKey = `${key}:${when === "true" ? "" : when}`;
       // Distinct conditions may still apply in other focus contexts.
       if (!laterBindings.has(`${key}:`) && !laterBindings.has(conditionKey)) {
-        previewLabels[index]!.add(formatShortcutLabel(shortcut, platform));
+        previewLabels[index]!.add(
+          shortcut === null
+            ? formatBindingLabel(binding, platform)
+            : formatShortcutLabel(shortcut, platform),
+        );
       }
       laterBindings.add(conditionKey);
     }
