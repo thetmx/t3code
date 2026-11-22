@@ -115,9 +115,9 @@ export function shortcutConflictKey(
   ].join("|");
 }
 
-function shortcutForContext(
+export function shortcutForContext(
   binding: ResolvedShortcutKeybindingRule,
-  context: ShortcutMatchContext,
+  context: Partial<ShortcutMatchContext>,
 ) {
   const shortcut = binding.shortcut;
   // Resolve persisted Mod+Enter against send preference without rewriting saved shortcuts.

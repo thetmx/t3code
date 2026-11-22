@@ -1,5 +1,6 @@
 import { linkOriginIsFenced, ProjectId, type ProjectScript, ThreadId } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import { splitsSurrogatePair } from "@t3tools/shared/assistantCitations";
 import {
   projectScriptRuntimeEnv,
   projectScriptsInheritDefaults,
@@ -342,7 +343,14 @@ export const make = Effect.gen(function* () {
           ) {
             return Effect.void;
           }
-          return input.onOutputLine(cleaned.slice(0, OUTPUT_LINE_MAX_LENGTH));
+          return input.onOutputLine(
+            cleaned.slice(
+              0,
+              splitsSurrogatePair(cleaned, OUTPUT_LINE_MAX_LENGTH)
+                ? OUTPUT_LINE_MAX_LENGTH - 1
+                : OUTPUT_LINE_MAX_LENGTH,
+            ),
+          );
         });
 
       const unsubscribe = yield* terminalManager.subscribe((event) => {
@@ -356,7 +364,10 @@ export const make = Effect.gen(function* () {
           lineBuffer = lines.pop() ?? "";
           // Bound newline-free output; the sentinel has its own line, so retaining the tail is safe.
           if (lineBuffer.length > PARTIAL_LINE_MAX_LENGTH) {
-            lineBuffer = lineBuffer.slice(-PARTIAL_LINE_MAX_LENGTH);
+            const start = lineBuffer.length - PARTIAL_LINE_MAX_LENGTH;
+            lineBuffer = lineBuffer.slice(
+              splitsSurrogatePair(lineBuffer, start) ? start + 1 : start,
+            );
           }
           return Effect.forEach(lines, handleLine, { discard: true }).pipe(
             Effect.andThen(
