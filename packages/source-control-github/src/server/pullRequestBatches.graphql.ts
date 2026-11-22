@@ -63,6 +63,8 @@ export interface StatusContext extends Schema.Struct.Type<typeof StatusContext.f
 
 /** A workflow contains meta information about an Actions workflow file. */
 export const Workflow = Schema.Struct({
+  /** The Node ID of the Workflow object */
+  id: Shared.ID,
   /** The name of the workflow. */
   name: Schema.String
 })
@@ -70,6 +72,10 @@ export interface Workflow extends Schema.Struct.Type<typeof Workflow.fields> {}
 
 /** A workflow run. */
 export const WorkflowRun = Schema.Struct({
+  /** The event that triggered the workflow run */
+  event: Schema.String,
+  /** A number that uniquely identifies this workflow run in its parent workflow. */
+  runNumber: Shared.Int,
   /** The workflow executed in this workflow run. */
   workflow: Workflow
 })
@@ -237,7 +243,7 @@ export const PullRequestSummary = GraphQL.query("PullRequestSummary", {
       { name: "stacks", body: "Boolean!" }
     ],
     selections: [
-      { name: "repository", body: ["(owner:$", "owner", " name:$", "name", "){pullRequest(number:$", "number", "){number title url state isDraft mergeable reviewDecision additions deletions changedFiles updatedAt mergedAt closedAt headRefName baseRefName author{__typename login avatarUrl...on User{name}}latestReviews(first:20){nodes{state isMinimized author{__typename login}}}commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){nodes{__typename...on StatusContext{context state}...on CheckRun{name status conclusion startedAt completedAt checkSuite{workflowRun{workflow{name}}}}}pageInfo{hasNextPage}}}}}}stack@include(if:$", "stacks", "){number size baseRefName}stackEntry@include(if:$", "stacks", "){position}}}"] }
+      { name: "repository", body: ["(owner:$", "owner", " name:$", "name", "){pullRequest(number:$", "number", "){number title url state isDraft mergeable reviewDecision additions deletions changedFiles updatedAt mergedAt closedAt headRefName baseRefName author{__typename login avatarUrl...on User{name}}latestReviews(first:20){nodes{state isMinimized author{__typename login}}}commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){nodes{__typename...on StatusContext{context state}...on CheckRun{name status conclusion startedAt completedAt checkSuite{workflowRun{event runNumber workflow{id name}}}}}pageInfo{hasNextPage}}}}}}stack@include(if:$", "stacks", "){number size baseRefName}stackEntry@include(if:$", "stacks", "){position}}}"] }
     ],
     fragments: []
   },

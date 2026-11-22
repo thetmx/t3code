@@ -322,12 +322,17 @@ export function buildKeybindingRows(
       const binding = keybindings[index]!;
       const when = whenAstToExpression(binding.whenAst);
       if (when === "false") continue;
-      const shortcut = shortcutForContext(binding, { composerRequiresModifier });
-      const key = shortcutConflictKey(shortcut, platform);
+      const steps =
+        "shortcut" in binding
+          ? [shortcutForContext(binding, { composerRequiresModifier })]
+          : binding.chord;
+      const key = steps.map((step) => shortcutConflictKey(step, platform)).join(" ");
       const conditionKey = `${key}:${when === "true" ? "" : when}`;
       // Distinct conditions may still apply in other focus contexts.
       if (!laterBindings.has(`${key}:`) && !laterBindings.has(conditionKey)) {
-        previewLabels[index]!.add(formatShortcutLabel(shortcut, platform));
+        previewLabels[index]!.add(
+          steps.map((step) => formatShortcutLabel(step, platform)).join(" "),
+        );
       }
       laterBindings.add(conditionKey);
     }

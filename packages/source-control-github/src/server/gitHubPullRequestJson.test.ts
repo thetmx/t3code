@@ -1970,7 +1970,9 @@ describe("batched pull request summaries", () => {
     conclusion,
     startedAt: "2026-08-24T00:00:00Z",
     completedAt: "2026-08-24T00:01:00Z",
-    checkSuite: { workflowRun: { workflow: { name: "CI" } } },
+    checkSuite: {
+      workflowRun: { event: "pull_request", runNumber: 1, workflow: { id: "W_ci", name: "CI" } },
+    },
   });
   const rollup = (nodes: ReadonlyArray<Record<string, unknown>>, hasNextPage = false) => ({
     nodes: [{ commit: { statusCheckRollup: { contexts: { nodes, pageInfo: { hasNextPage } } } } }],

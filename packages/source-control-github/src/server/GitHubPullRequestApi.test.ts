@@ -1251,7 +1251,13 @@ layer("GitHubPullRequestApi.layer", (it) => {
                         conclusion: "SUCCESS",
                         startedAt: "2026-08-24T12:00:00.000Z",
                         completedAt: "2026-08-24T12:01:00.000Z",
-                        checkSuite: { workflowRun: { workflow: { name: "CI" } } },
+                        checkSuite: {
+                          workflowRun: {
+                            event: "pull_request",
+                            runNumber: 1,
+                            workflow: { id: "W_ci", name: "CI" },
+                          },
+                        },
                       },
                       {
                         __typename: "StatusContext",

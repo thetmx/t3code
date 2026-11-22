@@ -39,6 +39,15 @@ const toDetailResult = <A, R>(effect: Effect.Effect<A, KeybindingsConfigError, R
     Effect.result,
   );
 
+// Custom rules follow the defaults and the list keeps its last MAX_KEYBINDINGS_COUNT entries.
+const fillerCountHidingDefault = (key: string, command: KeybindingCommand) =>
+  MAX_KEYBINDINGS_COUNT -
+  SharedKeybindings.DEFAULT_KEYBINDINGS.length +
+  SharedKeybindings.DEFAULT_KEYBINDINGS.findIndex(
+    (rule) => rule.key === key && rule.command === command,
+  ) +
+  1;
+
 const writeKeybindingsConfig = (configPath: string, rules: readonly KeybindingRule[]) =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
@@ -198,6 +207,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
       });
 
       assert.deepEqual(yield* readKeybindingsConfig(keybindingsConfigPath), [
+        { key: "mod+j", command: "terminal.toggle" },
         { key: "mod+g x", command: "terminal.toggle" },
       ]);
       assert.isTrue(
@@ -654,7 +664,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
       const keybindings = yield* Keybindings.Keybindings;
       yield* writeKeybindingsConfig(
         keybindingsConfigPath,
-        Array.from({ length: 210 }, (_, index) => ({
+        Array.from({ length: fillerCountHidingDefault("mod+n", "chat.new") }, (_, index) => ({
           key: "mod+alt+f1",
           command: `script.filler-${index}.run` as const,
         })),
@@ -687,7 +697,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
         const keybindings = yield* Keybindings.Keybindings;
         yield* writeKeybindingsConfig(
           keybindingsConfigPath,
-          Array.from({ length: 209 }, (_, index) => ({
+          Array.from({ length: fillerCountHidingDefault("mod+n", "chat.new") - 1 }, (_, index) => ({
             key: "mod+alt+f1",
             command: `script.filler-${index}.run` as const,
           })),
