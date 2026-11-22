@@ -830,6 +830,8 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   // Adapters read this when their instances are built, so it has to be
   // provided after hydration: hydration's own requirements do not mention it.
   Layer.provideMerge(layerThreadPortSpace),
+).pipe(
+  // A second pipe: one pipe call takes at most 20 steps.
   Layer.provideMerge(
     Layer.mergeAll(
       AntigravityInstallation.AntigravityInstallation.layer.pipe(
