@@ -197,7 +197,9 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
         });
       });
 
+      // Adding to an inherited command keeps its default beside the new chord.
       assert.deepEqual(yield* readKeybindingsConfig(keybindingsConfigPath), [
+        { key: "mod+j", command: "terminal.toggle" },
         { key: "mod+g x", command: "terminal.toggle" },
       ]);
       assert.isTrue(
@@ -666,7 +668,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
       const keybindings = yield* Keybindings.Keybindings;
       yield* writeKeybindingsConfig(
         keybindingsConfigPath,
-        Array.from({ length: 210 }, (_, index) => ({
+        Array.from({ length: 194 }, (_, index) => ({
           key: "mod+alt+f1",
           command: `script.filler-${index}.run` as const,
         })),
@@ -699,7 +701,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
         const keybindings = yield* Keybindings.Keybindings;
         yield* writeKeybindingsConfig(
           keybindingsConfigPath,
-          Array.from({ length: 209 }, (_, index) => ({
+          Array.from({ length: 193 }, (_, index) => ({
             key: "mod+alt+f1",
             command: `script.filler-${index}.run` as const,
           })),
