@@ -11,6 +11,7 @@ import {
   type ScopedThreadRef,
 } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { sideThreadComposer, sideThreadKindOf } from "@t3tools/client-runtime/side-thread";
 import { projectScriptRuntimeEnv } from "@t3tools/shared/projectScripts";
 import { nextTerminalId } from "@t3tools/shared/terminalLabels";
 import { getTerminalLabel } from "@t3tools/shared/terminalLabelsCopy";
@@ -34,10 +35,8 @@ import {
   useRightPanelStore,
   type RightPanelSurface,
 } from "../rightPanelStore";
-import { appAtomRegistry } from "../rpc/atomRegistry";
 import { readThreadShell } from "../state/entities";
 import { previewEnvironment } from "../state/preview";
-import { environmentShell } from "../state/shell";
 import { terminalEnvironment } from "../state/terminal";
 import { threadEnvironment } from "../state/threads";
 import { useAtomCommand } from "../state/use-atom-command";
@@ -70,7 +69,8 @@ interface SurfaceGroupInput {
   previewSessions: Readonly<Record<string, PreviewSessionSnapshot>>;
   previewDesktopByTabId: Readonly<Record<string, DesktopPreviewOverlay>>;
   isServerThread: boolean;
-  isGitRepo: boolean;
+  /** The thread has a diff to show: a Git folder, or turns that changed tracked repositories. */
+  diffAvailable: boolean;
   /** Whether a diff is already showing, so activating one only announces the first. */
   diffOpen: boolean;
   onDiffPanelOpen: (() => void) | undefined;
@@ -102,7 +102,7 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
     previewSessions,
     previewDesktopByTabId,
     isServerThread,
-    isGitRepo,
+    diffAvailable,
     diffOpen,
     onDiffPanelOpen,
     supportsPullRequests,
@@ -118,7 +118,7 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
   const deleteThread = useAtomCommand(threadEnvironment.delete, "side chat delete");
   const storeCloseTerminal = useTerminalUiStateStore((state) => state.closeTerminal);
 
-  const openBrowserTab = async (profileId?: string) => {
+  const openBrowserTab = async (profileId?: string, duplicateFrom?: PreviewSessionSnapshot) => {
     if (
       !threadRef ||
       !groupRef ||
@@ -130,6 +130,7 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
       groupRef,
       openPreview,
       ...(profileId === undefined ? {} : { profileId }),
+      ...(duplicateFrom === undefined ? {} : { duplicateFrom }),
     });
     if (result._tag !== "Failure" || isAtomCommandInterrupted(result)) return;
     const error = squashAtomCommandFailure(result);
@@ -146,8 +147,13 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
   const addBrowser = (profileId?: string) => {
     void openBrowserTab(profileId);
   };
+  const duplicateBrowser = (surface: RightPanelSurface) => {
+    if (surface.kind !== "preview" || !surface.resourceId) return;
+    const snapshot = previewSessions[surface.resourceId];
+    if (snapshot) void openBrowserTab(undefined, snapshot);
+  };
   const addDiff = () => {
-    if (!groupRef || !threadRef || !isServerThread || !isGitRepo) return;
+    if (!groupRef || !threadRef || !isServerThread || !diffAvailable) return;
     useDiffPanelStore.getState().selectGitScope(threadRef, "branch");
     useRightPanelStore.getState().open(groupRef, "diff");
     onDiffPanelOpen?.();
@@ -291,11 +297,19 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
     if (surface.kind === "terminal") {
       requestTerminalFocus();
     }
-    if (surface.kind === "side-chat") {
-      requestWorkspaceFocus({
-        area: "panel",
-        selector: `[data-side-chat-pane="${CSS.escape(surface.threadId)}"] [data-workspace-area="composer"] [contenteditable="true"]`,
-      });
+    if (surface.kind === "thread") {
+      const kind = sideThreadKindOf(
+        readThreadShell(scopeThreadRef(threadRef.environmentId, surface.threadId)),
+      );
+      // A thread with no composer, or one not known yet, takes focus as any other tab does.
+      requestWorkspaceFocus(
+        kind !== null && sideThreadComposer(kind) === "composer"
+          ? {
+              area: "panel",
+              selector: `[data-side-chat-pane="${CSS.escape(surface.threadId)}"] [data-workspace-area="composer"] [contenteditable="true"]`,
+            }
+          : { area: "panel" },
+      );
     }
     if (surface.kind === "diff" && !diffOpen) {
       onDiffPanelOpen?.();
@@ -330,14 +344,12 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
         }
       }
       if (
-        surface.kind === "side-chat" &&
-        readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope) &&
-        // A live shell without the side chat means it is already deleted.
-        !(
-          appAtomRegistry.get(environmentShell.stateValueAtom(threadRef.environmentId)).status ===
-            "live" &&
-          readThreadShell(scopeThreadRef(threadRef.environmentId, surface.threadId)) === null
-        )
+        surface.kind === "thread" &&
+        // Only a side chat the shell still lists is thrown away with its tab; a subagent belongs to
+        // its parent's work, and an unlisted side chat is already deleted.
+        readThreadShell(scopeThreadRef(threadRef.environmentId, surface.threadId))?.lineage
+          .sideChat === true &&
+        readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope)
       ) {
         // The server keeps a side chat with a run or message. Reopen skips one it deleted.
         void deleteThread({
@@ -462,6 +474,7 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
   // Fixed identities, so the actions can go into props and dependency arrays
   // without keeping an old render alive (see useStableCallback).
   const addBrowserStable = useStableCallback(addBrowser);
+  const duplicateBrowserStable = useStableCallback(duplicateBrowser);
   const addDiffStable = useStableCallback(addDiff);
   const addFilesStable = useStableCallback(addFiles);
   const addPullRequestStable = useStableCallback(addPullRequest);
@@ -481,6 +494,7 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
   const closeAllStable = useStableCallback(closeAll);
   return {
     addBrowser: addBrowserStable,
+    duplicateBrowser: duplicateBrowserStable,
     addDiff: addDiffStable,
     addFiles: addFilesStable,
     addPullRequest: addPullRequestStable,

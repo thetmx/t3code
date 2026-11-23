@@ -77,6 +77,7 @@ import * as LocalPortForwarder from "../portForward/LocalPortForwarder.ts";
 import * as LoopbackTunnel from "../preview/LoopbackTunnel.ts";
 import * as PortSpaceProxy from "../preview/PortSpaceProxy.ts";
 import * as PreviewManager from "../preview/Manager.ts";
+import * as AppleSpeech from "../speech/AppleSpeech.ts";
 
 interface StubbedDesktop {
   readonly localEnvironmentEnabled: boolean;
@@ -241,6 +242,7 @@ const runStubbedDesktop = (stub: StubbedDesktop) =>
             ),
           ),
           Layer.mock(MacPermissions.MacPermissions, {}),
+          Layer.mock(AppleSpeech.AppleSpeech, {}),
           Layer.mock(LoopbackTunnel.LoopbackTunnel, {}),
           Layer.mock(PortSpaceProxy.PortSpaceProxy, {}),
           Layer.mock(PreviewManager.PreviewManager, {

@@ -245,6 +245,8 @@ const parsePosixEnvironment = (output: string): EnvironmentPatch => {
 const captureWindowsEnvironmentCommand = (names: ReadonlyArray<string>) =>
   [
     "$ErrorActionPreference = 'Stop'",
+    // Redirected PowerShell output uses the console code page, which mangles non-ASCII paths.
+    "try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}",
     ...names.flatMap((name) => {
       return [
         `Write-Output '${startMarker(name)}'`,
@@ -643,6 +645,8 @@ const CACHED_ENV_NAMES = [
   // The server reads these once at startup, before fresh discovery finishes.
   "CODE_PROJECTS_PARENT_DIRS",
   "CODE_PROJECTS",
+  // The server reads its flags once at start, before discovery can finish.
+  "T3CODE_FEATURE_FLAGS",
 ] as const;
 
 /** @public */
