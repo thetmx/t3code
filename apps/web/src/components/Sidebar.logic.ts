@@ -43,11 +43,6 @@ import {
   type ThreadSortInput,
 } from "@t3tools/client-runtime/state/thread-sort";
 import type { SidebarThreadSummary, Thread } from "../types";
-import {
-  composerDraftHasUserContent,
-  type ComposerThreadDraftState,
-  type DraftSessionState,
-} from "../composerDraftStore";
 import { normalizeSearchText } from "../lib/utils";
 import { isLatestRunSettled } from "../session-logic";
 import { THREAD_STATUS_TEXT } from "@t3tools/client-runtime/state/thread-activity-announcement";
@@ -211,11 +206,18 @@ export function useSnoozeWakeClock(
   return clockMs;
 }
 
-// Live status that says the cwd is not a repository means the checkout was removed.
+// Live status that says the cwd is not a repository means the checkout was removed. A worktree
+// thread of a project with tracked folders may sit in a plain task folder, which never is one.
 export function withoutRemovedCheckout<
   T extends { readonly branch: string | null; readonly worktreePath: string | null },
->(thread: T, gitStatus: { readonly isRepo?: boolean | undefined } | null): T {
-  return gitStatus?.isRepo === false ? { ...thread, branch: null, worktreePath: null } : thread;
+>(
+  thread: T,
+  gitStatus: { readonly isRepo?: boolean | undefined } | null,
+  project: { readonly trackedFolders?: ReadonlyArray<unknown> | undefined } | null,
+): T {
+  if (gitStatus?.isRepo !== false) return thread;
+  if (thread.worktreePath !== null && (project?.trackedFolders?.length ?? 0) > 0) return thread;
+  return { ...thread, branch: null, worktreePath: null };
 }
 
 export function useRetainedValue<T>(key: string | null, value: T | null): T | null {
@@ -865,6 +867,35 @@ export function shouldCreateNewThreadInCurrentProject(
   return shiftKey || openProjectGroupCount === 1 || projectGroupCount === 0;
 }
 
+/**
+ * A sidebar filtered to one project already says where the next thread belongs,
+ * so New skips the picker there. A project grouped across environments keeps the
+ * viewed thread's environment when that thread belongs to the group.
+ */
+export function resolveScopedNewThreadProjectRef<
+  TRef extends { readonly environmentId: string; readonly projectId: string },
+>(input: {
+  shiftKey: boolean;
+  scopedProjectGroups: readonly {
+    readonly environmentId: string;
+    readonly id: string;
+    readonly memberProjectRefs: readonly TRef[];
+  }[];
+  viewed: { readonly environmentId: string; readonly projectId: string } | null | undefined;
+}): TRef | null {
+  const [group, ...otherGroups] = input.scopedProjectGroups;
+  if (input.shiftKey || !group || otherGroups.length > 0) return null;
+  const memberAt = (environmentId: string, projectId: string) =>
+    group.memberProjectRefs.find(
+      (ref) => ref.environmentId === environmentId && ref.projectId === projectId,
+    );
+  return (
+    (input.viewed && memberAt(input.viewed.environmentId, input.viewed.projectId)) ??
+    memberAt(group.environmentId, group.id) ??
+    null
+  );
+}
+
 export function orderItemsByPreferredIds<TItem, TId>(input: {
   items: readonly TItem[];
   preferredIds: readonly TId[];
@@ -941,26 +972,6 @@ export function resolveAdjacentThreadId<T>(input: {
   }
 
   return currentIndex < threadIds.length - 1 ? (threadIds[currentIndex + 1] ?? null) : null;
-}
-
-/** Draft ids in sidebar order. The open draft stays listed while empty so traversal can leave it. */
-export function orderSidebarDraftIds(input: {
-  draftThreadsByThreadKey: Readonly<Record<string, DraftSessionState>>;
-  draftsByThreadKey: Readonly<Record<string, ComposerThreadDraftState>>;
-  scopedProjectKeys: ReadonlySet<string> | null;
-  routeDraftId: string | null;
-}) {
-  return Object.entries(input.draftThreadsByThreadKey)
-    .filter(
-      ([draftKey, session]) =>
-        session.promotedTo == null &&
-        (input.scopedProjectKeys === null ||
-          input.scopedProjectKeys.has(`${session.environmentId}:${session.projectId}`)) &&
-        (draftKey === input.routeDraftId ||
-          composerDraftHasUserContent(input.draftsByThreadKey[draftKey])),
-    )
-    .toSorted(([, left], [, right]) => right.createdAt.localeCompare(left.createdAt))
-    .map(([draftKey]) => draftKey);
 }
 
 /**
@@ -1278,6 +1289,8 @@ export function pullRequestMatchesSearchQuery(
   return normalizedQuery.split(" ").every((token) => haystack.includes(token));
 }
 
+export const ADD_PROJECT_SCOPE_ITEM_VALUE = "add-project";
+
 export function filterSidebarProjectScopeItems<TItem extends { readonly value: string }>(input: {
   items: readonly TItem[];
   query: string;
@@ -1285,7 +1298,12 @@ export function filterSidebarProjectScopeItems<TItem extends { readonly value: s
 }): readonly TItem[] {
   const query = input.query.trim();
   if (query.length === 0) return input.items;
-  return input.items.filter((item) => item.value !== "all" && input.matches(item, query));
+  return input.items.filter(
+    (item) =>
+      item.value !== "all" &&
+      item.value !== ADD_PROJECT_SCOPE_ITEM_VALUE &&
+      input.matches(item, query),
+  );
 }
 
 interface SidebarProjectScopeMenuState {

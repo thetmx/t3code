@@ -56,7 +56,10 @@ query PullRequestSummary($owner: String!, $name: String!, $number: Int!, $stacks
                     completedAt
                     checkSuite {
                       workflowRun {
+                        event
+                        runNumber
                         workflow {
+                          id
                           name
                         }
                       }
