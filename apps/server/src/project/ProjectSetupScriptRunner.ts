@@ -712,7 +712,6 @@ export const make = Effect.gen(function* () {
             ? releaseTerminal
             : Effect.void,
       ),
-      releaseOnBlockingFailure ? Effect.onInterrupt(() => releaseTerminal) : (effect) => effect,
     );
 
     return {

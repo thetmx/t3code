@@ -1216,6 +1216,7 @@ effectIt.effect(
             currentPid: Effect.sync(() => launcherPid),
           }),
           Layer.succeed(HostProcess.Platform, "linux"),
+          makePortSpaceLayers(),
           FetchHttpClient.layer.pipe(
             Layer.provide(Layer.succeed(FetchHttpClient.Fetch, () => Promise.reject(new Error()))),
           ),
@@ -1294,6 +1295,7 @@ effectIt.effect.each([
         }),
         Layer.succeed(HostProcess.Platform, "darwin"),
         FetchHttpClient.layer,
+        makePortSpaceLayers(),
       ),
     ),
   );

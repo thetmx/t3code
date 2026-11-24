@@ -101,6 +101,7 @@ const runWithCursorFile = (input: {
             open,
             write,
             getShell: () => Effect.succeed("/bin/zsh"),
+            close: () => Effect.void,
             subscribe: () => Effect.succeed(() => undefined),
           }),
           ServerSettings.layerTest(input.settings),
@@ -212,15 +213,15 @@ const makeReleaseHarness = (input: { readonly async: boolean; readonly writeFail
           )
         : Deferred.succeed(commandWritten, undefined).pipe(Effect.asVoid),
   );
-  // Recorded when the effect runs, not when it is built.
+  // Recorded when the effect runs, not when it is built, and only for a running shell: the runner
+  // also closes any leftover setup shell before it opens one.
   const closeCalls: Array<Parameters<TerminalManager.TerminalManager["Service"]["close"]>[0]> = [];
   const closeIdleCalls: Array<
     Parameters<TerminalManager.TerminalManager["Service"]["closeIdle"]>[0]
   > = [];
   const close = (input: Parameters<TerminalManager.TerminalManager["Service"]["close"]>[0]) =>
     Effect.sync(() => {
-      closeCalls.push(input);
-      shells.delete(`${input.threadId}:${input.terminalId}`);
+      if (shells.delete(`${input.threadId}:${input.terminalId}`)) closeCalls.push(input);
     });
   const closeIdle = (
     input: Parameters<TerminalManager.TerminalManager["Service"]["closeIdle"]>[0],
