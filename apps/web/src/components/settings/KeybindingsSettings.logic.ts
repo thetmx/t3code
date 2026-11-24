@@ -181,9 +181,22 @@ function sourceForBinding(binding: ResolvedKeybindingRule): KeybindingSource {
 
 function defaultBindingForBinding(
   binding: ResolvedKeybindingRule,
+  keybindings: ResolvedKeybindingsConfig,
 ): ResolvedKeybindingRule | undefined {
   const bindingKey = bindingToKeybindingInput(binding);
   const bindingWhen = whenAstToExpression(binding.whenAst);
+  const isBound = (entry: ResolvedKeybindingRule) =>
+    keybindings.some(
+      (other) =>
+        other.command === entry.command &&
+        bindingToKeybindingInput(other) === bindingToKeybindingInput(entry) &&
+        [whenAstToExpression(entry.whenAst), "false"].includes(whenAstToExpression(other.whenAst)),
+    );
+  // An edited row does not record which default it replaced; a default the command still has,
+  // or that is unassigned, cannot be it.
+  const findDefault = (matches: (entry: ResolvedKeybindingRule) => boolean) =>
+    DEFAULT_RESOLVED_KEYBINDINGS.find((entry) => matches(entry) && !isBound(entry)) ??
+    DEFAULT_RESOLVED_KEYBINDINGS.find(matches);
 
   return (
     DEFAULT_RESOLVED_KEYBINDINGS.find(
@@ -198,11 +211,11 @@ function defaultBindingForBinding(
             entry.command === binding.command && bindingToKeybindingInput(entry) === bindingKey,
         )
       : undefined) ??
-    DEFAULT_RESOLVED_KEYBINDINGS.find(
+    findDefault(
       (entry) =>
         entry.command === binding.command && whenAstToExpression(entry.whenAst) === bindingWhen,
     ) ??
-    DEFAULT_RESOLVED_KEYBINDINGS.find((entry) => entry.command === binding.command)
+    findDefault((entry) => entry.command === binding.command)
   );
 }
 
@@ -339,7 +352,7 @@ export function buildKeybindingRows(
   }
   const rowsById = new Map<string, KeybindingRow>();
   for (const [index, binding] of keybindings.entries()) {
-    const defaultBinding = defaultBindingForBinding(binding);
+    const defaultBinding = defaultBindingForBinding(binding, keybindings);
     const key = bindingToKeybindingInput(binding);
     const when = whenAstToExpression(binding.whenAst);
     const id = keybindingRowId(binding.command, key, when);

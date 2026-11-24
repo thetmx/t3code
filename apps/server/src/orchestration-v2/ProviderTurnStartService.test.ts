@@ -811,6 +811,8 @@ function makeLocalCommandHarness(input: {
       id: threadId,
       activeProviderThreadId: providerThreadId,
       projectId: ProjectId.make("project-native-account-command"),
+      runtimeMode: "full-access",
+      interactionMode: "default",
       branch: input.worktreePath === undefined ? null : "feature/restore",
       worktreePath: input.worktreePath ?? null,
       lineage: { parentThreadId: null, relationshipToParent: null, rootThreadId: threadId },
@@ -3041,7 +3043,7 @@ effectIt.effect.each(["cleanup-first", "startup-first"])(
       const path = yield* Path.Path;
       const workspaceRoot = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-start-" });
       const worktreePath = path.join(workspaceRoot, "project", "worktree");
-      yield* fileSystem.makeDirectory(worktreePath, { recursive: true });
+      yield* fileSystem.makeDirectory(path.join(worktreePath, ".git"), { recursive: true });
       const release = yield* Deferred.make<void>();
       const openEntered = yield* Deferred.make<void>();
       const harness = makeLocalCommandHarness({
@@ -3053,7 +3055,7 @@ effectIt.effect.each(["cleanup-first", "startup-first"])(
       });
       harness.createWorktree.mockImplementation(() =>
         fileSystem
-          .makeDirectory(worktreePath, { recursive: true })
+          .makeDirectory(path.join(worktreePath, ".git"), { recursive: true })
           .pipe(Effect.as({} as never), Effect.orDie),
       );
       const open = harness.open.getMockImplementation()!;

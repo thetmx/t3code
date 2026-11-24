@@ -139,8 +139,8 @@ open.
 Threads that are busy move into two collapsed sections below the active list. **Working** holds
 threads whose agent is running. **Waiting** holds threads whose agent has stopped but will come back
 without you: it is waiting on a subagent, a watched pull request with checks still running, a Claude
-monitor, or a background command or other monitor it says it is waiting on. A dev server or other
-process an agent leaves running does not keep a thread there. A thread returns to
+monitor or `sleep` timer, or a background command or other monitor it says it is waiting on. A dev
+server or other process an agent leaves running does not keep a thread there. A thread returns to
 the top of the active list when it finishes, fails, or needs an approval or answer. Both sections
 list the thread you last sent work to first. Pinned threads stay in the pinned section.
 
@@ -202,8 +202,9 @@ Work in progress, pending questions or approvals, and background work the agent
 is waiting on prevent automatic settlement. An open pull request does not prevent inactivity
 settlement unless you turn on **Keep threads with a PR** in **Settings → Threads**,
 but an old closed or merged pull request does not settle work you
-resumed after it closed. Only your own messages count as resuming. A turn that
-finished background work or a pull request watch starts on its own does not.
+resumed after it closed. Your own messages count as resuming, and so does a
+message an agent sends with `t3_thread_send` or `t3 thread send`. A turn that finished
+background work or a pull request watch starts on its own does not.
 
 To keep one thread out of the settled shelf no matter how long it sits idle, open its menu,
 choose **Auto-settle behavior**, and pick **Never**. The current option is checked. Pick
