@@ -179,6 +179,7 @@ const layerRuntime = (dbPath: string) => {
         Layer.mock(ProjectSetupScriptRunner.ProjectSetupScriptRunner)({}),
       ),
     ),
+    Layer.provide(Layer.mock(ProjectSetupScriptRunner.ProjectSetupScriptRunner)({})),
     Layer.provide(layerNoTaskFolders),
     Layer.provide(layerPlatform),
   );

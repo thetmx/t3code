@@ -1,4 +1,9 @@
-import { ThreadId, type ProjectId, type TerminalCwdNotFoundError } from "@t3tools/contracts";
+import {
+  ThreadId,
+  type OrchestrationV2LinkOrigin,
+  type ProjectId,
+  type TerminalCwdNotFoundError,
+} from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -47,6 +52,7 @@ interface WorktreeThread {
   readonly projectId: ProjectId;
   readonly worktreePath: string | null;
   readonly branch: string | null;
+  readonly linkOrigin?: OrchestrationV2LinkOrigin | undefined;
 }
 
 const makeRestoreMissingWorktree = Effect.gen(function* () {
@@ -197,6 +203,7 @@ const makeRestoreMissingWorktree = Effect.gen(function* () {
         .restore({
           taskFolder,
           branch,
+          projectCommands: TaskFolders.projectCommandsForLink(thread.linkOrigin),
           recreate: (checkout) =>
             Effect.logWarning("recreating missing worktree", {
               threadId: thread.id,
@@ -330,6 +337,7 @@ export const makePrepareTerminalLaunch = Effect.fn(
     }
     const recover = (error: TerminalCwdNotFoundError) =>
       restoreMissingWorktree(thread).pipe(
+        Effect.asVoid,
         Effect.catch((cause) =>
           Effect.logWarning("failed to recreate missing worktree", {
             threadId: thread.id,
