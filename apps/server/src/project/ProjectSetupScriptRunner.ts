@@ -698,19 +698,19 @@ export const make = Effect.gen(function* () {
     );
 
     const completion = observed?.completion.pipe(
-      Effect.onInterrupt(() =>
-        Fiber.interrupt(commandWriter).pipe(
-          Effect.andThen(Effect.sync(() => readiness.unsubscribe())),
-          Effect.andThen(terminalManager.close({ threadId: input.threadId, terminalId })),
-          Effect.ignore,
-        ),
-      ),
       Effect.tap(({ exitCode }) =>
         exitCode === 0
           ? terminalManager.closeIdle({ threadId: input.threadId, terminalId })
           : releaseOnBlockingFailure
             ? releaseTerminal
             : Effect.void,
+      ),
+      Effect.onInterrupt(() =>
+        Fiber.interrupt(commandWriter).pipe(
+          Effect.andThen(Effect.sync(() => readiness.unsubscribe())),
+          Effect.andThen(terminalManager.close({ threadId: input.threadId, terminalId })),
+          Effect.ignore,
+        ),
       ),
     );
 

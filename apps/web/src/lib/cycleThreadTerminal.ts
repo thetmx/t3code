@@ -1,6 +1,6 @@
 import type { ScopedThreadRef } from "@t3tools/contracts";
 
-import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
+import { selectThreadRightPanelState, threadTabsRef, useRightPanelStore } from "../rightPanelStore";
 import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import { focusTerminal, type TerminalFocusOwner } from "./terminalFocus";
 
@@ -12,7 +12,8 @@ export function cycleThreadTerminal(
   const drawer = useTerminalUiStateStore.getState();
   const panels = useRightPanelStore.getState();
   const drawerState = selectThreadTerminalUiState(drawer.terminalUiStateByThreadKey, threadRef);
-  const panelState = selectThreadRightPanelState(panels.byThreadKey, threadRef);
+  const groupRef = owner === "tab" ? threadTabsRef(threadRef) : threadRef;
+  const panelState = selectThreadRightPanelState(panels.byThreadKey, groupRef);
   const activeSurface = panelState.surfaces.find(
     (surface) => surface.id === panelState.activeSurfaceId,
   );
@@ -46,8 +47,8 @@ export function cycleThreadTerminal(
       (surface) => surface.kind === "terminal" && surface.terminalIds.includes(terminalId),
     );
     if (!surface) return false;
-    panels.activateTerminal(threadRef, surface.id, terminalId);
-    panels.activateSurface(threadRef, surface.id);
+    panels.activateTerminal(groupRef, surface.id, terminalId);
+    panels.activateSurface(groupRef, surface.id);
   }
   focusTerminal(threadRef, terminalId);
   return true;

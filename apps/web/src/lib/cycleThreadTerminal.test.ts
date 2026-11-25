@@ -2,7 +2,7 @@ import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { expect, it } from "vite-plus/test";
 
-import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
+import { selectThreadRightPanelState, threadTabsRef, useRightPanelStore } from "../rightPanelStore";
 import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import { cycleThreadTerminal } from "./cycleThreadTerminal";
 import { registerTerminalFocusTarget } from "./terminalFocus";
@@ -90,4 +90,21 @@ it("cycles panel terminal surfaces and splits without changing the drawer", () =
   ).toBe("drawer");
   panels.close(ref);
   expect(cycleThreadTerminal(ref, "right-panel", "next")).toBe(false);
+});
+
+it("cycles main-area tab terminals while the right panel is closed", () => {
+  const ref = setup();
+  const tabsRef = threadTabsRef(ref);
+  const panels = useRightPanelStore.getState();
+  panels.openTerminal(tabsRef, "a");
+  panels.openTerminal(tabsRef, "b");
+  expect(selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, ref).isOpen).toBe(
+    false,
+  );
+  for (const expected of ["a", "b"]) {
+    expect(cycleThreadTerminal(ref, "tab", "next")).toBe(true);
+    const state = selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, tabsRef);
+    const active = state.surfaces.find((surface) => surface.id === state.activeSurfaceId);
+    expect(active).toMatchObject({ kind: "terminal", activeTerminalId: expected });
+  }
 });
