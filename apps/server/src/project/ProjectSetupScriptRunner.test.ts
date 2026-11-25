@@ -101,6 +101,7 @@ const runWithCursorFile = (input: {
             open,
             write,
             getShell: () => Effect.succeed("/bin/zsh"),
+            close: () => Effect.void,
             subscribe: () => Effect.succeed(() => undefined),
           }),
           ServerSettings.layerTest(input.settings),
@@ -219,7 +220,8 @@ const makeReleaseHarness = (input: { readonly async: boolean; readonly writeFail
   > = [];
   const close = (input: Parameters<TerminalManager.TerminalManager["Service"]["close"]>[0]) =>
     Effect.sync(() => {
-      closeCalls.push(input);
+      // Setup first closes any stale shell it would reuse; only closes once a shell is open count.
+      if (opened.length > 0) closeCalls.push(input);
       shells.delete(`${input.threadId}:${input.terminalId}`);
     });
   const closeIdle = (

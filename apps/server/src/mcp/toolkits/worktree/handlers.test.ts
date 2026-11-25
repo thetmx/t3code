@@ -22,6 +22,7 @@ import * as Stream from "effect/Stream";
 
 import * as ServerConfig from "../../../config.ts";
 import * as GitWorkflowService from "../../../git/GitWorkflowService.ts";
+import * as WorktreeManager from "../../../git/WorktreeManager.ts";
 import * as ThreadManagementService from "../../../orchestration-v2/ThreadManagementService.ts";
 import * as ProjectService from "../../../project/ProjectService.ts";
 import * as ProjectSetupScriptRunner from "../../../project/ProjectSetupScriptRunner.ts";
@@ -122,19 +123,24 @@ const handoffFrom = <A, E>(
         Layer.unwrap(
           Effect.gen(function* () {
             const driver = yield* GitVcsDriver.GitVcsDriver;
-            return Layer.mock(GitWorkflowService.GitWorkflowService)({
-              localStatus: () =>
-                Effect.succeed({
-                  isRepo: true,
-                  hasPrimaryRemote: false,
-                  isDefaultRef: true,
-                  refName: "main",
-                  hasWorkingTreeChanges: false,
-                  workingTree: { files: [], insertions: 0, deletions: 0 },
-                }),
-              listLocalBranchNames: driver.listLocalBranchNames,
-              createWorktree: driver.createWorktree,
-            });
+            return Layer.merge(
+              Layer.mock(GitWorkflowService.GitWorkflowService)({
+                localStatus: () =>
+                  Effect.succeed({
+                    isRepo: true,
+                    hasPrimaryRemote: false,
+                    isDefaultRef: true,
+                    refName: "main",
+                    hasWorkingTreeChanges: false,
+                    workingTree: { files: [], insertions: 0, deletions: 0 },
+                  }),
+                listLocalBranchNames: driver.listLocalBranchNames,
+                createWorktree: driver.createWorktree,
+              }),
+              Layer.mock(WorktreeManager.WorktreeManager)({
+                createWorktree: driver.createWorktree,
+              }),
+            );
           }),
         ),
         Layer.mock(ProjectSetupScriptRunner.ProjectSetupScriptRunner)({

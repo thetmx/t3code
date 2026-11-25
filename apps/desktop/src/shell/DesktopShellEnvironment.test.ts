@@ -1202,12 +1202,12 @@ describe("DesktopShellEnvironment", () => {
         handler: (command) =>
           command._tag === "StandardCommand" &&
           String(command.args.at(-1)).includes("T3CODE_TELEMETRY_ENABLED")
-            ? envOutput({
+            ? powershellEnvOutput({
                 PATH: "C:\\Windows\\System32",
                 T3CODE_TELEMETRY_ENABLED: "false",
                 DO_NOT_TRACK: "1",
               })
-            : envOutput({ PATH: "C:\\Windows\\System32" }),
+            : powershellEnvOutput({ PATH: "C:\\Windows\\System32" }),
       });
 
       assert.equal(env.T3CODE_TELEMETRY_ENABLED, "false");
