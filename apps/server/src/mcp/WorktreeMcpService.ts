@@ -80,6 +80,8 @@ const make = Effect.gen(function* () {
   const setupScriptRunner = yield* ProjectSetupScriptRunner.ProjectSetupScriptRunner;
   const vcsStatusBroadcaster = yield* VcsStatusBroadcaster.VcsStatusBroadcaster;
   const taskFolders = yield* TaskFolders.TaskFolders;
+  // The administrator's limit, fixed for the server's life as it is where turns start.
+  const maxRuntimeMode = serverSettings.managedPolicy?.limits?.maxRuntimeMode;
 
   // Serialize handoffs per thread to avoid creating two worktrees and orphaning one.
   const handoffThreadsInFlight = new Set<string>();
@@ -181,6 +183,15 @@ const make = Effect.gen(function* () {
 
     const project = yield* loadProject(scope, projection.thread.projectId);
     const projectCwd = project.workspaceRoot;
+    // The agent asks, so its thread's modes decide what of the project's own code runs for it:
+    // as they are when each piece is about to run, since the fetch in between can take a while.
+    const projectCommandsNow = loadThread(scope).pipe(
+      Effect.map(({ thread }) =>
+        TaskFolders.projectCommandsForAgent(thread.linkOrigin, thread, maxRuntimeMode),
+      ),
+      // A thread that cannot be read might be below Full access.
+      Effect.orElseSucceed((): TaskFolders.ProjectCommands => "agent-below-full-access"),
+    );
 
     // A project that tracks repositories moves into a task folder: its own folder, which need
     // not be a repository, and a worktree of each tracked one.
@@ -287,6 +298,7 @@ const make = Effect.gen(function* () {
                       projectStart: { refName: worktreeBaseRef, baseRefName },
                       baseBranch: input.baseRef,
                       startFromOrigin,
+                      projectCommands: projectCommandsNow,
                     })
                     .pipe(
                       Effect.map((created) => {
@@ -305,9 +317,10 @@ const make = Effect.gen(function* () {
         );
         const worktreePath = worktree.path;
 
+        const createdTaskFolder = worktree.taskFolder;
         const removeCreatedWorktree = Effect.suspend(
           (): Effect.Effect<unknown, GitCommandError | TaskFolderError> =>
-            worktree.taskFolder === null
+            createdTaskFolder === null
               ? gitWorkflow
                   .removeWorktree({ cwd: projectCwd, path: worktreePath, force: true })
                   .pipe(
@@ -322,19 +335,24 @@ const make = Effect.gen(function* () {
                     ),
                   )
               : taskFolders.remove({
-                  root: worktree.taskFolder,
+                  root: createdTaskFolder,
                   force: true,
                   forget: true,
+                  projectCommands: projectCommandsNow,
                   deleteBranch: worktree.refName,
                 }),
         ).pipe(Effect.ignoreCause({ log: true }));
 
+        // The saved setup script is the project's code too: below Full access it waits for a person.
+        const setupWaitsForFullAccess =
+          (input.runSetupScript ?? true) &&
+          (yield* projectCommandsNow) === "agent-below-full-access";
         // Setup finishes before the binding and the continuation, so the resumed
         // agent never starts in a checkout a blocking script is still preparing
         // (or that failed to prepare). Any failure, or a cancel, takes the
         // worktree down again: nothing is bound yet.
         const runSetupScript: Effect.Effect<WorktreeMcpSetupScriptStatus, WorktreeMcpFailure> =
-          (input.runSetupScript ?? true)
+          (input.runSetupScript ?? true) && !setupWaitsForFullAccess
             ? ProjectSetupScriptRunner.runForThreadSettled(setupScriptRunner, {
                 threadId: scope.thread.threadId,
                 projectId: projection.thread.projectId,
@@ -447,10 +465,15 @@ const make = Effect.gen(function* () {
           startedFromOrigin,
           setupScript,
           continuation,
-          note:
+          note: `${
             continuation.status === "scheduled"
               ? "Handoff recorded. Changing the workspace detaches this provider session, so the current turn ends shortly after this call; the queued continuation prompt then starts the next turn inside the worktree with the conversation preserved. The worktree is not removed automatically when the thread is deleted."
-              : "Handoff recorded. Changing the workspace detaches this provider session, so the current turn ends shortly after this call; the conversation continues inside the worktree when the thread receives its next message. Pass continuationPrompt to resume automatically. The worktree is not removed automatically when the thread is deleted.",
+              : "Handoff recorded. Changing the workspace detaches this provider session, so the current turn ends shortly after this call; the conversation continues inside the worktree when the thread receives its next message. Pass continuationPrompt to resume automatically. The worktree is not removed automatically when the thread is deleted."
+          }${
+            setupWaitsForFullAccess
+              ? " Project setup scripts do not run for a handoff from a thread below Full access."
+              : ""
+          }`,
         };
         return result;
       }),
