@@ -324,9 +324,11 @@ describe("CommandPalette open intents", () => {
     await using _screen = await render(<CommandPalette>{null}</CommandPalette>);
 
     openCommandPalette({});
-    const rootInput = page.getByPlaceholder("Search commands, projects, and threads...");
+    const rootInput = page.getByPlaceholder("Search threads, or type > for commands...");
     await expect.element(rootInput).toHaveFocus();
-    await userEvent.keyboard("{ArrowDown}");
+    await userEvent.keyboard(">");
+    await expect.element(page.getByRole("option").first()).toHaveAttribute("data-highlighted");
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
     await expect
       .element(page.getByRole("option", { name: /^New thread in\.\.\./ }))
       .toHaveAttribute("data-highlighted");
@@ -375,7 +377,7 @@ describe("CommandPalette open intents", () => {
     await userEvent.keyboard("{Escape}");
     await expect.element(palette).toHaveAttribute("data-palette-mode", "command");
     await expect
-      .element(page.getByPlaceholder("Search commands, projects, and threads..."))
+      .element(page.getByPlaceholder("Search threads, or type > for commands..."))
       .toHaveFocus();
 
     await act(() => {
