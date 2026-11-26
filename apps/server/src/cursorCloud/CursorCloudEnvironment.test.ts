@@ -1,4 +1,8 @@
-import { ProviderDriverKind, ProviderInstanceId } from "@t3tools/contracts";
+import {
+  DEFAULT_SERVER_SETTINGS,
+  ProviderDriverKind,
+  ProviderInstanceId,
+} from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
 import { cursorCloudSettings } from "./CursorCloudEnvironment.ts";
@@ -12,6 +16,10 @@ describe("cursorCloudSettings", () => {
           driver: ProviderDriverKind.make("cursor"),
           config: { customModels: ["x"] },
         },
+      },
+      {
+        worktreeReuse: { enabled: true, maxStandby: 3, standbyHours: 72 },
+        storageCleanup: { ...DEFAULT_SERVER_SETTINGS.storageCleanup, worktreeAfterDays: 5 },
       },
     );
     const instances = Object.entries(settings.providerInstances);
@@ -29,6 +37,8 @@ describe("cursorCloudSettings", () => {
     expect(instances.length).toBeGreaterThan(1);
     expect(settings).toMatchObject({
       theme: "dark",
+      worktreeReuse: { enabled: true, standbyHours: 72 },
+      storageCleanup: { worktreeAfterDays: 5 },
       defaultModelSelection: { instanceId: "cursor", model: "composer-2.5" },
     });
   });

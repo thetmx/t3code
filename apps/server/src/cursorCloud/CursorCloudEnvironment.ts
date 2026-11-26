@@ -12,6 +12,7 @@ import {
   ProviderDriverKind,
   ProviderInstanceConfigMap,
   ProviderInstanceId,
+  type ServerSettings as ServerSettingsType,
 } from "@t3tools/contracts";
 import { spawnAndCollect } from "@t3tools/provider-core/server/snapshotProbe";
 import * as HostProcess from "@t3tools/shared/HostProcess";
@@ -56,6 +57,7 @@ const decodeDescriptorResponse = HttpClientResponse.schemaBodyJson(
 export function cursorCloudSettings(
   settings: Readonly<Record<string, unknown>>,
   configured: ProviderInstanceConfigMap,
+  host: Pick<ServerSettingsType, "worktreeReuse" | "storageCleanup">,
 ) {
   const instances = { ...configured };
   for (const driver of BUILT_IN_DRIVERS) {
@@ -73,6 +75,9 @@ export function cursorCloudSettings(
   };
   return {
     ...settings,
+    // Its threads use worktrees too, so they follow this machine's reuse and cleanup rules.
+    worktreeReuse: host.worktreeReuse,
+    storageCleanup: host.storageCleanup,
     providerInstances: instances,
     defaultModelSelection: settings.defaultModelSelection ?? {
       instanceId: CURSOR_INSTANCE,
@@ -219,10 +224,11 @@ const make = Effect.gen(function* () {
       ? yield* decodeSettings(yield* fileSystem.readFileString(paths.settingsPath))
       : {};
     const instances = yield* decodeInstances(settings.providerInstances ?? {});
+    const host = yield* serverSettings.getSettings;
     yield* fileSystem.makeDirectory(paths.stateDir, { recursive: true });
     yield* fileSystem.writeFileString(
       paths.settingsPath,
-      yield* encodeSettings(cursorCloudSettings(settings, instances)),
+      yield* encodeSettings(cursorCloudSettings(settings, instances, host)),
     );
   });
 

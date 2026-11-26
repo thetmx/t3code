@@ -48,7 +48,7 @@ describe("cursorCloudRepoUrl", () => {
 });
 
 describe("cursorCloudAgentOptions", () => {
-  it("drops local-only options and never opens a PR", () => {
+  it("drops local-only options and opens a PR for the agent's work", () => {
     expect(
       cursorCloudAgentOptions(
         {
@@ -64,42 +64,30 @@ describe("cursorCloudAgentOptions", () => {
       mode: "agent",
       cloud: {
         repos: [{ url: "https://github.com/acme/app", startingRef: "main" }],
-        autoCreatePR: false,
+        autoCreatePR: true,
       },
     });
   });
 });
 
 describe("cursorCloudRunner", () => {
-  it("starts from the pushed branch and fast-forwards to the agent's branch after a run", async () =>
+  it("starts the agent from the checkout's pushed branch", async () =>
     await Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "cursor-cloud-" });
       const origin = path.join(root, "origin.git");
       const workspace = path.join(root, "workspace");
-      const agentClone = path.join(root, "agent");
       yield* git(root, "init", "-q", "--bare", "-b", "main", origin);
       yield* git(root, "clone", "-q", origin, workspace);
       yield* fileSystem.writeFileString(path.join(workspace, "base"), "");
       yield* git(workspace, "add", "base");
       yield* git(workspace, "commit", "-qm", "base");
       yield* git(workspace, "push", "-q", "origin", "HEAD:main");
-      // Cursor's VM pushes its work to a branch of its own.
-      yield* git(root, "clone", "-q", origin, agentClone);
-      yield* git(agentClone, "checkout", "-qb", "cursor/feature");
-      yield* fileSystem.writeFileString(path.join(agentClone, "feature"), "");
-      yield* git(agentClone, "add", "feature");
-      yield* git(agentClone, "commit", "-qm", "feature");
-      yield* git(agentClone, "push", "-q", "origin", "cursor/feature");
 
       const opened: Array<AgentOptions> = [];
       const sent: Array<unknown> = [];
-      const result: RunResult = {
-        id: "run-1",
-        status: "finished",
-        git: { branches: [{ repoUrl: origin, branch: "cursor/feature" }] },
-      };
+      const result: RunResult = { id: "run-1", status: "finished" };
       const fake = {
         assertComplete: Effect.void,
         open: (input) =>
@@ -140,7 +128,6 @@ describe("cursorCloudRunner", () => {
         { url: cursorCloudRepoUrl(origin), startingRef: "main" },
       ]);
       expect(sent).toEqual([{ mode: "agent" }]);
-      expect(yield* git(workspace, "log", "-1", "--format=%s")).toBe("feature");
     }).pipe(
       Effect.scoped,
       Effect.provide([NodeServices.layer, FetchHttpClient.layer]),

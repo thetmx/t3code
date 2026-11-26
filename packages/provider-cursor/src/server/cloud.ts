@@ -1,10 +1,10 @@
 /**
- * Cursor Cloud: the Cursor adapter with its agents running on Cursor's VMs. The local thread's
- * checkout names the repository, and each finished run fast-forwards it to the agent's branch.
+ * Cursor Cloud: the Cursor adapter with its agents running on Cursor's VMs. The thread's local
+ * checkout only names the repository; the agent's work arrives as a pull request.
  *
  * @module provider-cursor/server/cloud
  */
-import type { AgentOptions, RunResult, SendOptions } from "@cursor/sdk";
+import type { AgentOptions, SendOptions } from "@cursor/sdk";
 import type {
   OrchestrationV2ProviderCapabilities,
   OrchestrationV2ProviderSession,
@@ -41,7 +41,8 @@ export function cursorCloudAgentOptions(
 ): AgentOptions {
   // Local workspace settings and T3's loopback MCP servers mean nothing on Cursor's VM.
   const { local: _local, mcpServers: _mcpServers, ...shared } = options;
-  return { ...shared, cloud: { ...(repo ? { repos: [repo] } : {}), autoCreatePR: false } };
+  // The VM's work never reaches the local checkout, so a pull request is how it comes back.
+  return { ...shared, cloud: { ...(repo ? { repos: [repo] } : {}), autoCreatePR: true } };
 }
 
 function cursorCloudSendOptions(options: Omit<SendOptions, "onDelta"> | undefined) {
@@ -116,21 +117,6 @@ export const cursorCloudRunner = Effect.fn("cursorCloudRunner")(function* (
     return pushed && branch ? { url, startingRef: branch } : { url };
   });
 
-  const pullAgentBranch = Effect.fn("CursorCloudRunner.pullAgentBranch")(function* (
-    cwd: string,
-    result: RunResult,
-  ) {
-    const branch = result.git?.branches.find((candidate) => candidate.branch)?.branch;
-    if (branch === undefined) return;
-    if ((yield* git(cwd, ["fetch", "origin", branch])) === undefined) {
-      return yield* Effect.logWarning("cursor-cloud.branch-fetch-failed", { cwd, branch });
-    }
-    // Fast-forward only, so local edits made during the run are never overwritten.
-    if ((yield* git(cwd, ["merge", "--ff-only", "FETCH_HEAD"])) === undefined) {
-      yield* Effect.logWarning("cursor-cloud.branch-not-fast-forward", { cwd, branch });
-    }
-  });
-
   return CursorAgentSdk.CursorAgentSdkRunner.of({
     ...local,
     assertComplete: cloud.assertComplete,
@@ -179,17 +165,9 @@ export const cursorCloudRunner = Effect.fn("cursorCloudRunner")(function* (
         send: (sendInput) => {
           const options = cursorCloudSendOptions(sendInput.options);
           const { options: _options, ...rest } = sendInput;
-          return session.send(options === undefined ? rest : { ...rest, options }).pipe(
-            Effect.map((run) => ({
-              ...run,
-              cancel: cancelRun(run),
-              wait: run.wait.pipe(
-                Effect.tap((result) =>
-                  workspace === undefined ? Effect.void : pullAgentBranch(workspace, result),
-                ),
-              ),
-            })),
-          );
+          return session
+            .send(options === undefined ? rest : { ...rest, options })
+            .pipe(Effect.map((run) => ({ ...run, cancel: cancelRun(run) })));
         },
       } satisfies CursorAgentSdk.CursorAgentSdkSession;
     }),
