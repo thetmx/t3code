@@ -238,30 +238,83 @@ describe("BrowserImport.importCookies", () => {
       assert.equal(error.reason, "unknownSourceProfile");
     }).pipe(Effect.provide(NodeServices.layer)),
   );
+});
 
+describe("BrowserImport.syncCookies", () => {
   it.effect.skipIf(!symlinksSupported)(
-    "refuses to import while the source browser holds its profile",
+    "imports from a running browser once per partition and source",
     () =>
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
-        const { importer, root } = yield* withImporter();
+        const home = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3code-sync-" });
+        const root = `${home}/.config/chromium`;
+        yield* fileSystem.makeDirectory(`${root}/Default`, { recursive: true });
         yield* fileSystem.symlink("host-that-does-not-exist-1234", `${root}/SingletonLock`);
+        yield* Effect.sync(() => {
+          using database = new NodeSqlite.DatabaseSync(`${root}/Default/Cookies`);
+          database.exec(`
+            create table meta (key text primary key, value text not null);
+            insert into meta values ('version', '23');
+            create table cookies (
+              host_key text, name text, value text, encrypted_value blob, path text,
+              expires_utc integer, is_secure integer, is_httponly integer, samesite integer,
+              top_frame_site_key text not null default ''
+            );
+            insert into cookies values
+              ('chromium.example', 'session', 'plain', x'', '/', 0, 1, 1, 1, '');
+          `);
+        });
 
-        const error = yield* importer
-          .importCookies({
-            input: {
-              sourceId: "helium",
-              sourceProfileDirectory: "Default",
-              targetProfileId: "default",
-            },
-            scope: "persist:t3code-preview-test",
-            persistent: true,
-          })
-          .pipe(Effect.flip);
+        const writtenScopes: Array<string | undefined> = [];
+        const importer = yield* BrowserImport.BrowserImport.pipe(
+          Effect.provide(
+            BrowserImport.layer.pipe(
+              Layer.provide(
+                Layer.succeed(BrowserSession.BrowserSession, {
+                  getPartition: () => Effect.die("getPartition must not be reached"),
+                  isPartition: () => false,
+                  getSession: (scope) =>
+                    Effect.succeed({
+                      cookies: {
+                        set: () => {
+                          writtenScopes.push(scope);
+                          return Promise.resolve();
+                        },
+                        flushStore: () => Promise.resolve(),
+                      },
+                    } as unknown as Session),
+                  clearCookies: () => Effect.die("clearCookies must not be reached"),
+                  cookiesCleared: () => Effect.die("cookiesCleared must not be reached"),
+                  clearCache: () => Effect.die("clearCache must not be reached"),
+                }),
+              ),
+              Layer.provide(DesktopManagedPolicy.layerTest()),
+              Layer.provide(Layer.succeed(HostProcess.Environment, { HOME: home })),
+              Layer.provide(Layer.succeed(HostProcess.Platform, "linux")),
+              Layer.provide(Layer.succeed(HostProcess.ExecutablePath, "/fixture/t3code")),
+              Layer.provide(NodeServices.layer),
+            ),
+          ),
+        );
 
-        assert.instanceOf(error, BrowserImport.BrowserImportFailedError);
-        assert.equal(error.reason, "browserRunning");
-      }).pipe(Effect.provide(NodeServices.layer)),
+        const listed = (yield* importer.listSources).find((source) => source.id === "chromium");
+        assert.isUndefined(listed?.unavailable);
+        assert.deepEqual(
+          listed?.profiles.map((profile) => profile.directory),
+          ["Default"],
+        );
+
+        const source = { sourceId: "chromium" as const, sourceProfileDirectory: "Default" };
+        yield* importer.syncCookies({ source, scope: "environment-a", persistent: true });
+        yield* importer.syncCookies({ source, scope: "environment-a", persistent: true });
+        yield* importer.syncCookies({ source, scope: "environment-b", persistent: true });
+
+        assert.deepEqual(writtenScopes, ["environment-a", "environment-b"]);
+      }).pipe(
+        Effect.provideService(LinuxBrowserSecretPath, undefined),
+        Effect.provide(NodeServices.layer),
+        Effect.scoped,
+      ),
   );
 });
 

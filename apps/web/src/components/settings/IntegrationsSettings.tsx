@@ -32,6 +32,7 @@ import {
   findBrowserProfile,
   isBuiltInBrowserProfileId,
   resolveBrowserProfiles,
+  type BrowserCookieSyncSource,
   type BrowserImportSource,
   type PreviewAppearancePreference,
   type PreviewViewportSetting,
@@ -41,7 +42,7 @@ import { isValidSearchUrlTemplate } from "@t3tools/shared/preview";
 import { PREVIEW_VIEWPORT_PRESETS } from "@t3tools/shared/previewViewport";
 import { MoreVertical, Plus as PlusIcon } from "lucide-react";
 import * as Schema from "effect/Schema";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { msg, T, useGT, useMessages, Var } from "gt-react";
 import { m as resolveNow, type MessageResolver } from "../../i18n/messages";
 
@@ -1327,6 +1328,110 @@ function BrowserAutoShowFloatingPreviewSetting({ disabled }: { readonly disabled
   );
 }
 
+const COOKIE_SYNC_OFF = "off";
+const cookieSyncValue = (source: BrowserCookieSyncSource) =>
+  JSON.stringify([source.sourceId, source.sourceProfileDirectory]);
+
+function BrowserCookieSyncSetting({ disabled }: { readonly disabled: boolean }) {
+  const searchableSetting = useSearchableSetting();
+  const gt = useGT();
+  const messages = useMessages();
+  const syncSource = useClientSettings((settings) => settings.browserCookieSyncSource);
+  // This desktop's main process reads the source, so it saves for this device in every scope.
+  const updateSettings = useUpdatePrimarySettings();
+  const denial = managedCapabilityDenial(
+    usePrimaryManagedPolicy(),
+    "browserCookieImport",
+    messages,
+  );
+  const [sources, setSources] = useState<ReadonlyArray<BrowserImportSource>>([]);
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- lists installed browsers from the desktop bridge
+  useEffect(() => {
+    if (disabled || !previewBridge) return;
+    let current = true;
+    void previewBridge
+      .listBrowserImportSources()
+      .then((next) => current && setSources(next))
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [disabled]);
+
+  const options = sources.flatMap((source) =>
+    source.unavailable === undefined || source.unavailable === "browserRunning"
+      ? source.profiles.map((profile) => ({
+          source: { sourceId: source.id, sourceProfileDirectory: profile.directory },
+          label: `${source.name} · ${profile.name}`,
+        }))
+      : [],
+  );
+  const value = syncSource === null ? COOKIE_SYNC_OFF : cookieSyncValue(syncSource);
+  const selectedLabel =
+    syncSource === null
+      ? gt("Off")
+      : (options.find((option) => cookieSyncValue(option.source) === value)?.label ??
+        `${syncSource.sourceId} · ${syncSource.sourceProfileDirectory}`);
+
+  return (
+    <SettingsRow
+      {...searchableSetting("browser-cookie-sync")}
+      devicePreference
+      description={
+        denial ??
+        gt(
+          "Copies cookies from the chosen browser into the Default profile on each launch. Sign-ins here are not copied back.",
+        )
+      }
+      resetAction={
+        !disabled && syncSource !== null ? (
+          <SettingResetButton
+            ariaLabel={gt("Stop syncing browser cookies")}
+            onClick={() => updateSettings({ browserCookieSyncSource: null })}
+          />
+        ) : null
+      }
+      control={
+        <Select
+          disabled={disabled || (denial !== undefined && syncSource === null)}
+          value={value}
+          onValueChange={(next) => {
+            if (next === COOKIE_SYNC_OFF) {
+              updateSettings({ browserCookieSyncSource: null });
+              return;
+            }
+            const option = options.find((candidate) => cookieSyncValue(candidate.source) === next);
+            if (option) updateSettings({ browserCookieSyncSource: option.source });
+          }}
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-full sm:w-56"
+            aria-label={gt("Sync cookies on launch")}
+          >
+            <SelectValue>{selectedLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectPopup align="end" alignItemWithTrigger={false}>
+            <SelectItem hideIndicator value={COOKIE_SYNC_OFF}>
+              {gt("Off")}
+            </SelectItem>
+            {denial === undefined
+              ? options.map((option) => {
+                  const optionValue = cookieSyncValue(option.source);
+                  return (
+                    <SelectItem hideIndicator key={optionValue} value={optionValue}>
+                      {option.label}
+                    </SelectItem>
+                  );
+                })
+              : null}
+          </SelectPopup>
+        </Select>
+      }
+    />
+  );
+}
+
 function BrowserProfilesSetting({ disabled }: { readonly disabled: boolean }) {
   const searchableSetting = useSearchableSetting();
   const gt = useGT();
@@ -1846,6 +1951,7 @@ export function BrowserSettingsPanel() {
       <SettingsSection id="browser" title={gt("Browsing")}>
         <SettingsUnavailableGroup message={desktopOnlyMessage}>
           <BrowserProfilesSetting disabled={desktopOnly} />
+          <BrowserCookieSyncSetting disabled={desktopOnly} />
           <BrowserLinkTargetSetting disabled={desktopOnly} />
           <BrowserAutoShowFloatingPreviewSetting disabled={desktopOnly} />
         </SettingsUnavailableGroup>

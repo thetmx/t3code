@@ -38,6 +38,7 @@ import { ModelSelection } from "./modelSelection.ts";
 import { ProjectScript, type ProjectMutation } from "./project.ts";
 import { DEFAULT_RUNTIME_MODE, RuntimeMode } from "./providerPolicy.ts";
 import { BrowserProfile, BrowserProfileId, DEFAULT_BROWSER_PROFILE_ID } from "./browserProfile.ts";
+import { BrowserCookieSyncSource } from "./browserImport.ts";
 import {
   BrowserRecordingFrameRate,
   DEFAULT_BROWSER_RECORDING_FRAME_RATE,
@@ -486,6 +487,11 @@ export const ClientSettingsSchema = Schema.Struct({
 
   browserDefaultProfileId: BrowserProfileId.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_BROWSER_PROFILE_ID)),
+  ),
+
+  /** Desktop only: the browser profile whose cookies are copied into the Default profile on launch. */
+  browserCookieSyncSource: Schema.NullOr(BrowserCookieSyncSource).pipe(
+    Schema.withDecodingDefault(Effect.succeed(null)),
   ),
 
   confirmQuit: QuitConfirmationModeSetting.pipe(
@@ -2184,6 +2190,7 @@ export const ClientSettingsPatch = Schema.Struct({
   portForwardingEnabled: Schema.optionalKey(Schema.Boolean),
   browserProfiles: Schema.optionalKey(Schema.Array(BrowserProfile)),
   browserDefaultProfileId: Schema.optionalKey(BrowserProfileId),
+  browserCookieSyncSource: Schema.optionalKey(Schema.NullOr(BrowserCookieSyncSource)),
   confirmQuit: Schema.optionalKey(QuitConfirmationMode),
   confirmThreadArchive: Schema.optionalKey(Schema.Boolean),
   confirmTerminalClose: Schema.optionalKey(Schema.Boolean),

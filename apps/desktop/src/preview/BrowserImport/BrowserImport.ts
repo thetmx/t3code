@@ -1,4 +1,5 @@
 import type {
+  BrowserCookieSyncSource,
   BrowserImportInput,
   BrowserImportResult,
   BrowserImportSource,
@@ -6,12 +7,14 @@ import type {
 } from "@t3tools/contracts";
 import {
   BrowserImportFailureReason,
+  DEFAULT_BROWSER_PROFILE_ID,
   type ManagedPolicyDocument,
   managedPolicyDeniedMessage,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import type { Session } from "electron";
 import * as Effect from "effect/Effect";
+import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
@@ -124,6 +127,12 @@ export class BrowserImport extends Context.Service<
       readonly persistent: boolean;
       readonly namespace?: BrowserSession.BrowserSessionPartitionNamespace;
     }) => Effect.Effect<BrowserImportResult, BrowserImportFailedError | BrowserImportPolicyError>;
+    /** Imports into the Default profile's partition once per app run; failures are only logged. */
+    readonly syncCookies: (input: {
+      readonly source: BrowserCookieSyncSource;
+      readonly scope: string;
+      readonly persistent: boolean;
+    }) => Effect.Effect<void>;
   }
 >()("@t3tools/desktop/preview/BrowserImport/BrowserImport") {}
 
@@ -205,6 +214,8 @@ export const writeCookies = Effect.fn("BrowserImport.writeCookies")(function* (
   return { imported, skipped, skippedDomains: [...skippedDomains].slice(0, 20) };
 });
 
+const COOKIE_SYNC_WAIT = "10 seconds";
+
 /** @public */
 export const make = Effect.gen(function* BrowserImportMake() {
   const browserSession = yield* BrowserSession.BrowserSession;
@@ -223,8 +234,11 @@ export const make = Effect.gen(function* BrowserImportMake() {
       return {
         id: definition.id,
         name: definition.name,
+        // Running browsers still list profiles so a launch sync source can be picked.
         profiles:
-          unavailable === undefined ? yield* listSourceProfiles(definition, pathContext) : [],
+          unavailable === undefined || unavailable === "browserRunning"
+            ? yield* listSourceProfiles(definition, pathContext)
+            : [],
         ...(unavailable === undefined ? {} : { unavailable }),
       } satisfies BrowserImportSource;
     }),
@@ -349,7 +363,34 @@ export const make = Effect.gen(function* BrowserImportMake() {
     return yield* writeCookies(session, result);
   });
 
-  return BrowserImport.of({ listSources, importCookies });
+  const syncs = new Map<string, Fiber.Fiber<void>>();
+  const syncCookies = Effect.fn("BrowserImport.syncCookies")(function* ({
+    source,
+    ...partition
+  }: {
+    readonly source: BrowserCookieSyncSource;
+    readonly scope: string;
+    readonly persistent: boolean;
+  }) {
+    const key = [partition.scope, source.sourceId, source.sourceProfileDirectory].join("\u0000");
+    const existing = syncs.get(key);
+    const sync =
+      existing ??
+      (yield* importCookies({
+        ...partition,
+        input: { ...source, targetProfileId: DEFAULT_BROWSER_PROFILE_ID },
+      }).pipe(
+        Effect.tap((result) => Effect.logInfo("Synced browser cookies", { ...source, ...result })),
+        Effect.catch((cause) => Effect.logWarning("Browser cookie sync failed", { cause })),
+        Effect.asVoid,
+        Effect.forkDetach,
+      ));
+    if (existing === undefined) syncs.set(key, sync);
+    // A keyring prompt can stay open indefinitely; the page loads and later reloads get the cookies.
+    yield* Fiber.await(sync).pipe(Effect.timeoutOption(COOKIE_SYNC_WAIT));
+  });
+
+  return BrowserImport.of({ listSources, importCookies, syncCookies });
 });
 
 export const layer = Layer.effect(BrowserImport, make);

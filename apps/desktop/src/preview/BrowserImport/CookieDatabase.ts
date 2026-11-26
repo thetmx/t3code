@@ -43,7 +43,10 @@ export const cookieScope = (
 
 export const bareHost = (host: string): string => (host.startsWith(".") ? host.slice(1) : host);
 
-/** Copy before reading to avoid live WAL writes and never open the source browser database for writing. */
+/**
+ * Running browsers can hold an exclusive SQLite lock that blocks every reader. Plain file reads
+ * pass those advisory locks, so copy the jar and its sidecars and open only the private copy.
+ */
 export const snapshotCookieDatabase = Effect.fn("CookieDatabase.snapshotCookieDatabase")(function* (
   cookiePath: string,
   tempPrefix = "t3code-cookie-import-",
@@ -51,10 +54,21 @@ export const snapshotCookieDatabase = Effect.fn("CookieDatabase.snapshotCookieDa
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const directory = yield* fileSystem.makeTempDirectoryScoped({ prefix: tempPrefix });
+  const copy = path.join(directory, `source-${path.basename(cookiePath)}`);
+  yield* fileSystem.copyFile(cookiePath, copy);
+  // The WAL holds recent commits; a hot journal lets SQLite roll back a write caught mid-copy.
+  for (const sidecar of ["-wal", "-journal"]) {
+    yield* fileSystem.copyFile(`${cookiePath}${sidecar}`, `${copy}${sidecar}`).pipe(
+      Effect.catchIf(
+        (error) => error.reason._tag === "NotFound",
+        () => Effect.void,
+      ),
+    );
+  }
   const target = path.join(directory, path.basename(cookiePath));
   yield* Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     yield* sql`VACUUM INTO ${target}`;
-  }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: cookiePath, readonly: true })));
+  }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: copy })));
   return target;
 });

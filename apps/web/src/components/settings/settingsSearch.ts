@@ -1226,6 +1226,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     targetId: "browser-profiles",
   },
   {
+    id: "browser-cookie-sync",
+    title: msg("Sync cookies on launch"),
+    to: "/settings/browser",
+    searchTerms: [msg("import chrome firefox safari login signed in session default browser")],
+  },
+  {
     id: "browser-default-viewport",
     title: msg("Default browser viewport"),
     to: "/settings/browser",

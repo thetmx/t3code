@@ -1,3 +1,4 @@
+import * as NodeSqlite from "node:sqlite";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
 import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
@@ -37,6 +38,35 @@ describe("snapshotCookieDatabase", () => {
           return yield* sql<{ readonly name: string }>`SELECT name FROM cookies`;
         }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: snapshot, readonly: true })));
         expect(rows).toEqual([{ name: "committed-in-wal" }]);
+      }),
+    ),
+  );
+
+  it.effect("reads a database a running browser holds with an exclusive lock", () =>
+    runNode(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const sourceDirectory = yield* fileSystem.makeTempDirectoryScoped({
+          prefix: "t3code-cookie-locked-",
+        });
+        const source = path.join(sourceDirectory, "cookies.sqlite");
+        const browser = yield* Effect.acquireRelease(
+          Effect.sync(() => new NodeSqlite.DatabaseSync(source)),
+          (database) => Effect.sync(() => database.close()),
+        );
+        browser.exec(`
+          PRAGMA journal_mode = WAL;
+          PRAGMA locking_mode = EXCLUSIVE;
+          CREATE TABLE cookies(name TEXT NOT NULL);
+          INSERT INTO cookies(name) VALUES ('held-by-browser');
+        `);
+        const snapshot = yield* snapshotCookieDatabase(source);
+        const rows = yield* Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient;
+          return yield* sql<{ readonly name: string }>`SELECT name FROM cookies`;
+        }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: snapshot, readonly: true })));
+        expect(rows).toEqual([{ name: "held-by-browser" }]);
       }),
     ),
   );
