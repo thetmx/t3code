@@ -45,6 +45,7 @@ import { useAccessEnvironment } from "./useAccessEnvironment";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
 import { ManagedByOrganization } from "../ManagedPolicy";
 import { LocalEnvironmentSetting } from "./LocalEnvironmentSetting";
+import { CursorCloudEnvironmentSetting } from "./CursorCloudEnvironmentSetting";
 import { useSearchableSetting } from "./settingsSearch";
 import { ConnectDeviceApprovalSettings } from "./ConnectDeviceApprovalSettings";
 import { EnvironmentIconMenu } from "./EnvironmentIconPicker";
@@ -1830,6 +1831,9 @@ function ConnectionsSettingsContent({
       {desktopBridge ? (
         <SettingsSection id="this-app" title={gt("This app")}>
           <LocalEnvironmentSetting />
+          {primaryEnvironmentId !== null ? (
+            <CursorCloudEnvironmentSetting hostEnvironmentId={primaryEnvironmentId} />
+          ) : null}
         </SettingsSection>
       ) : null}
       <SettingsSection

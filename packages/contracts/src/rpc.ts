@@ -489,6 +489,12 @@ import {
   SourceControlSignInResult,
 } from "./sourceControl.ts";
 import { VcsError } from "./vcs.ts";
+import {
+  CursorCloudEnvironmentConfigureInput,
+  CursorCloudEnvironmentConfigureResult,
+  CursorCloudEnvironmentError,
+  CursorCloudEnvironmentState,
+} from "./cursorCloud.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
 export const WS_METHODS = {
@@ -605,6 +611,8 @@ export const WS_METHODS = {
   serverGetStorageCleanupReport: "server.getStorageCleanupReport",
   serverGetDatabaseStorage: "server.getDatabaseStorage",
   serverReclaimDatabaseSpace: "server.reclaimDatabaseSpace",
+  cursorCloudRead: "cursorCloud.read",
+  cursorCloudConfigure: "cursorCloud.configure",
   peerLinksList: "peerLinks.list",
   peerLinksNames: "peerLinks.names",
   peerLinksLink: "peerLinks.link",
@@ -973,6 +981,18 @@ const WsServerGetDatabaseStorageRpc = Rpc.make(WS_METHODS.serverGetDatabaseStora
 const WsServerReclaimDatabaseSpaceRpc = Rpc.make(WS_METHODS.serverReclaimDatabaseSpace, {
   payload: Schema.Struct({}),
   error: Schema.Union([DatabaseReclaimError, EnvironmentAuthorizationError]),
+});
+
+const WsCursorCloudReadRpc = Rpc.make(WS_METHODS.cursorCloudRead, {
+  payload: Schema.Struct({}),
+  success: CursorCloudEnvironmentState,
+  error: EnvironmentAuthorizationError,
+});
+
+const WsCursorCloudConfigureRpc = Rpc.make(WS_METHODS.cursorCloudConfigure, {
+  payload: CursorCloudEnvironmentConfigureInput,
+  success: CursorCloudEnvironmentConfigureResult,
+  error: Schema.Union([CursorCloudEnvironmentError, EnvironmentAuthorizationError]),
 });
 
 const WsPeerLinksListRpc = Rpc.make(WS_METHODS.peerLinksList, {
@@ -2559,6 +2579,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerGetDatabaseStorageRpc,
   WsServerGetSettingsRpc,
   WsServerReclaimDatabaseSpaceRpc,
+  WsCursorCloudReadRpc,
+  WsCursorCloudConfigureRpc,
   WsServerUpdateSettingsRpc,
   WsPeerLinksListRpc,
   WsPeerLinksNamesRpc,

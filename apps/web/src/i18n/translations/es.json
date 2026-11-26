@@ -13093,5 +13093,10 @@
       "v": "v"
     },
     " más en Elementos vinculados"
-  ]
+  ],
+  "8bcf21c22f6fa24c": "Cursor Cloud",
+  "2c5674665579a329": "Quitar",
+  "e2255a06e773efde": "Cursor Cloud es un entorno propio. Sus agentes se ejecutan en las máquinas virtuales de Cursor.",
+  "eb12469436215a4c": "Cursor Cloud se está ejecutando en este equipo, pero esta app no está conectada a él.",
+  "32013ad34bd530eb": "Añade un entorno cuyos agentes se ejecutan en las máquinas virtuales de Cursor. Se ejecuta junto al servidor de este equipo y usa tu inicio de sesión de Cursor."
 }

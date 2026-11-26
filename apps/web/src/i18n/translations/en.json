@@ -13107,5 +13107,10 @@
       "v": "v"
     },
     " more in Linked items"
-  ]
+  ],
+  "8bcf21c22f6fa24c": "Cursor Cloud",
+  "2c5674665579a329": "Remove",
+  "e2255a06e773efde": "Cursor Cloud is an environment of its own. Its agents run on Cursor's VMs.",
+  "eb12469436215a4c": "Cursor Cloud is running on this computer but this app isn't connected to it.",
+  "32013ad34bd530eb": "Add an environment whose agents run on Cursor's VMs. It runs beside this computer's server and uses your Cursor sign-in."
 }

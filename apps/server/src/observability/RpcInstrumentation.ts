@@ -67,6 +67,8 @@ const RPC_AGGREGATES = {
   [WS_METHODS.serverGetStorageCleanupReport]: "server",
   [WS_METHODS.serverGetDatabaseStorage]: "server",
   [WS_METHODS.serverReclaimDatabaseSpace]: "server",
+  [WS_METHODS.cursorCloudRead]: "server",
+  [WS_METHODS.cursorCloudConfigure]: "server",
   [WS_METHODS.peerLinksList]: "peerLinks",
   [WS_METHODS.peerLinksNames]: "peerLinks",
   [WS_METHODS.peerLinksLink]: "peerLinks",
