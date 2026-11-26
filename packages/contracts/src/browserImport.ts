@@ -63,6 +63,12 @@ export const BrowserImportInput = Schema.Struct({
 });
 export type BrowserImportInput = typeof BrowserImportInput.Type;
 
+export const BrowserCookieSyncSource = Schema.Struct({
+  sourceId: BrowserImportSourceId,
+  sourceProfileDirectory: TrimmedNonEmptyString,
+});
+export type BrowserCookieSyncSource = typeof BrowserCookieSyncSource.Type;
+
 export const DesktopPreviewImportCookiesInputSchema = Schema.Struct({
   environmentId: TrimmedNonEmptyString,
   sourceId: BrowserImportSourceId,

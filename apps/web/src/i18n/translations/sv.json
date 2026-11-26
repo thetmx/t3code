@@ -13066,5 +13066,9 @@
   "201490988858b511": "återkallad av {by}",
   "99451a5d2d40440f": "Återkallad av {by}.",
   "3ee30a50b70fffab": "Återkallad av {by}: {reason}",
-  "92e129bf413a1220": "återkallad"
+  "92e129bf413a1220": "återkallad",
+  "7324d528b7b128af": "Kopierar cookies från den valda webbläsaren till standardprofilen vid varje start. Inloggningar här kopieras inte tillbaka.",
+  "581d71c58e8d57b2": "Sluta synkronisera webbläsarens cookies",
+  "da5806ca74e9ceb3": "Synkronisera cookies vid start",
+  "a45ed300809ea088": "importera chrome firefox safari inloggning inloggad session standardwebbläsare"
 }

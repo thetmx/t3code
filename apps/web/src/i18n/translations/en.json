@@ -13068,5 +13068,9 @@
   "201490988858b511": "withdrawn by {by}",
   "99451a5d2d40440f": "Withdrawn by {by}.",
   "3ee30a50b70fffab": "Withdrawn by {by}: {reason}",
-  "92e129bf413a1220": "withdrawn"
+  "92e129bf413a1220": "withdrawn",
+  "7324d528b7b128af": "Copies cookies from the chosen browser into the Default profile on each launch. Sign-ins here are not copied back.",
+  "581d71c58e8d57b2": "Stop syncing browser cookies",
+  "da5806ca74e9ceb3": "Sync cookies on launch",
+  "a45ed300809ea088": "import chrome firefox safari login signed in session default browser"
 }

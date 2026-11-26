@@ -400,6 +400,16 @@ export const getPreviewConfig = DesktopIpc.makeIpcMethod({
         session: browserSession,
         tunnelled: tunnelLoopback === true,
       });
+      if (profileId === undefined || profileId === DEFAULT_BROWSER_PROFILE_ID) {
+        const settings = yield* (yield* DesktopClientSettings.DesktopClientSettings).get.pipe(
+          Effect.orElseSucceed(() => Option.none()),
+        );
+        const source = Option.getOrUndefined(settings)?.browserCookieSyncSource;
+        if (source) {
+          const browserImport = yield* BrowserImport.BrowserImport;
+          yield* browserImport.syncCookies({ source, scope, persistent });
+        }
+      }
     }
     return {
       partition: yield* manager.getBrowserPartition(scope, persistent, namespace),

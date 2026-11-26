@@ -13054,5 +13054,9 @@
   "201490988858b511": "retirada por {by}",
   "99451a5d2d40440f": "Retirada por {by}.",
   "3ee30a50b70fffab": "Retirada por {by}: {reason}",
-  "92e129bf413a1220": "retirada"
+  "92e129bf413a1220": "retirada",
+  "7324d528b7b128af": "Copia las cookies del navegador elegido al perfil predeterminado en cada inicio. Los inicios de sesión hechos aquí no se copian de vuelta.",
+  "581d71c58e8d57b2": "Dejar de sincronizar las cookies del navegador",
+  "da5806ca74e9ceb3": "Sincronizar cookies al iniciar",
+  "a45ed300809ea088": "importar chrome firefox safari inicio de sesión sesión iniciada navegador predeterminado"
 }
