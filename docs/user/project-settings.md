@@ -39,7 +39,7 @@ Configure worktrees in **Settings → Worktrees** (environment default or projec
 Enable automatic cleanup in **Settings → Worktrees → Cleanup** (off by default; runs on startup, on change, and hourly). Projects can set **Automatic worktree cleanup** to **Inherit**, **Off**, or **Custom**.
 
 - **Triggers**: Inactive days, days after settlement (`0` = next cleanup), merged PRs (including GitHub squash/rebase merges into the default branch), or settled/archived threads with no commits beyond the default branch.
-- **Safety**: Active sessions and shared worktrees are never removed. **Keep worktrees with local changes** defaults to **Uncommitted changes** (protects tracked edits and untracked files; removes ignored files like `.env`/build output). Choose **Any local files** (also protects ignored files except `node_modules`) or **Edited tracked files** (protects tracked edits only).
+- **Safety**: Shared worktrees are never removed, and active sessions are kept unless **Delete even when in use** applies. **Keep worktrees with local changes** defaults to **Uncommitted changes** (protects tracked edits and untracked files; removes ignored files like `.env`/build output). Choose **Any local files** (also protects ignored files except `node_modules`) or **Edited tracked files** (protects tracked edits only).
 - **Delete even when in use** (on by default): For settled, archived, and deleted threads, a matching worktree is removed despite uncommitted changes, ignored files, open terminals, or live sessions. T3 closes those terminals and sessions first; uncommitted work is permanently lost, committed work stays on the branch. Open threads, and every thread when this is off, keep worktrees that are in use or have local changes.
 - **Delete with deleted threads**: Enable **Delete worktrees with deleted threads** to clean up worktrees once their last thread is deleted. With **Delete even when in use** off, only safe worktrees are removed and skipped ones are retried after restart. With [worktree reuse](#worktree-reuse) on, removed worktrees go on standby instead.
 - **Scratch folders**: Inactive and settled rules also apply to [no-project scratch folders](./thread-sidebar.md#start-without-a-project) (skipped if they contain a Git repo or enabled scheduled task). Because scratch files aren't in Git, deleted files cannot be recovered.
@@ -48,7 +48,7 @@ Enable automatic cleanup in **Settings → Worktrees → Cleanup** (off by defau
 
 ### Worktree reuse
 
-Turn on **Reuse worktrees** in **Settings → Storage** to keep removed worktrees on standby and hand one to the next new thread in the same repository instead of creating another (off by default, per machine).
+Turn on **Reuse worktrees** in **Settings → Worktrees → Worktree reuse** to keep removed worktrees on standby and hand one to the next new thread in the same repository instead of creating another (off by default, per machine).
 
 - **Reset**: A reused worktree gets a new location, a clean checkout of the requested branch, and the setup script again. Uncommitted changes are discarded; ignored files such as `node_modules` are kept, so installs finish faster.
 - **Standby sources**: Worktrees go on standby when you delete a thread and remove its worktree, or when storage cleanup removes one. Resuming a thread whose worktree went to standby gives it a fresh checkout of its branch. Worktrees with submodules are removed as usual.

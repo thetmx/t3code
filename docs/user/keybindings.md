@@ -119,7 +119,7 @@ The last matching rule in `keybindings.json` wins, even across different command
 
 ## Reserved and platform shortcuts
 
-- `mod+w` (desktop): Closes the focused terminal, the active thread tab, or the active right-panel tab without closing the window. On web, browsers intercept `mod+w` and `mod+t`—rebind `thread.closeTab`, `rightPanel.close`, and `terminal.close` (e.g. `alt+w`).
+- `mod+w` (desktop): Closes the focused terminal, the active thread tab, or the active right-panel tab without closing the window. On web, browsers intercept `mod+w` and `mod+t`—rebind `thread.closeTab`, `rightPanel.close`, and `terminal.close` (e.g. `alt+w`), and `thread.newTab` and `rightPanel.new` for opening tabs.
 - `mod+shift+t`: Reopens the last closed panel tab (files, diffs, PRs, browsers, devices) in order. Browser tabs reopen as fresh sessions. Rebind on web if your browser intercepts it.
 - Keep `!terminalFocus` when remapping shortcuts that shouldn't intercept terminal input. `sidebar.toggle` ignores `Ctrl+B` inside terminals so `tmux` keeps its prefix (`Cmd+B` still works on macOS).
 
