@@ -1,148 +1,67 @@
 # Keybindings
 
-Customize shortcuts in **Settings → Keybindings** on web and desktop. That page
-also lists the command IDs and defaults available in your version.
+Customize keyboard shortcuts in **Settings → Keybindings** on web and desktop. That page lists every available command ID and default binding.
 
-To free a default shortcut for another command, choose **Unassign** from its row's
-actions menu. **Reset to default** brings it back.
+To free a default shortcut, choose **Unassign** from its row menu (**Reset to default** restores it).
 
-## Composer controls
+> Note: `mod` means `Cmd` on macOS and `Ctrl` on Windows and Linux.
 
-`mod+shift+d` starts dictation in the focused editor, or the composer, and finishes it on the next press;
-`Esc` discards the recording. Change the chord under **Composer: Start or Finish
-Dictation**, and the hold or toggle behavior in **Settings → Voice**. See
-[Voice input](./voice-input.md).
+## Common composer shortcuts
 
-In **Settings → Chat → Send shortcut**, choose whether Enter sends, requires
-`mod+Enter` for multiline prompts, or always requires `mod+Enter`. `Shift+Enter`
-inserts a new line. This applies to the web and desktop composer at desktop widths.
+| Action                      | Default           | Notes                                                                               |
+| --------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| Start / finish dictation    | `mod+shift+d`     | `Esc` discards. See [Voice input](./voice-input.md).                                |
+| Opposite queue/steer action | `mod+Enter`       | Uses the non-default follow-up behavior while a turn runs.                          |
+| Start thread in background  | `mod+Alt+Enter`   | Also `mod+Enter` in a new thread; opens a fresh draft immediately.                  |
+| Send first queued message   | `mod+Shift+Enter` | Steers if running, or starts a turn if stopped.                                     |
+| Pick model                  | `mod+shift+m`     | `mod+shift+up/down` switches providers inside the picker.                           |
+| Pick host / environment     | `mod+shift+h`     | Bind **Composer: Cycle Host** to step without a menu.                               |
+| Pick effort                 | `mod+shift+e`     | Bind **Increase/Decrease Effort** to step without a menu.                           |
+| Pick permissions            | `mod+shift+a`     |                                                                                     |
+| Pick workspace mode         | `mod+shift+x`     | Opens the palette on workspace choices; `mod+shift+l` reuses the previous worktree. |
+| Pick environment            | `ctrl+x l`        | Opens the palette on environments a new thread can run on.                          |
+| Pick Git branch             | `mod+shift+g`     |                                                                                     |
 
-**Follow-up behavior** chooses Queue or Steer while the agent runs. Use
-`mod+Enter` to do the opposite for one message, even when the send shortcut
-requires a modifier. `mod+Alt+Enter` sends, keeps that thread running in the
-background, and opens a fresh new-thread composer. In a new thread, `mod+Enter`
-does the same. Change these shortcuts in **Settings → Keybindings** under
-**Composer: Opposite Queue or Steer Action**, **Composer: Start in Background**,
-or **Composer: Send and Start New Thread**. These bindings take priority over the
-send shortcut. Click the send button to use the configured follow-up behavior.
+Configure whether `Enter` sends or requires `mod+Enter` in **Settings → Chat → Send shortcut** (`Shift+Enter` always inserts a newline).
 
-When a thread has queued messages, `mod+Shift+Enter` sends the first one as a steer
-while a turn is running, or as a new turn when the thread is stopped. Change it under
-**Queue: Send First Queued Message** in Keybindings.
+**Change model**, **Select workspace**, and **Select environment** are also in the command palette (`Cmd/Ctrl+K`).
 
-Use `mod+shift+m` to choose a model and `mod+shift+h` to choose a host.
-To step a new thread to the next machine instead of opening the menu, bind
-**Composer: Cycle Host** in Keybindings. It has no default shortcut.
-Use `mod+shift+e` for effort, `mod+shift+a` for permissions, `mod+shift+x` for the
-workspace, and `mod+shift+g` for the Git branch. `mod+shift+x` opens the command
-palette on the workspace choices (the current checkout, a new worktree, and the
-previous worktree when available), so you can type to filter them.
-Use `mod+shift+l` to reuse the previous worktree directly.
-The `ctrl+x l` chord opens the command palette on the environments a new thread can
-run on, so you can type to filter them.
-**Change model**, **Select workspace**, and **Select environment** are also in the
-command palette (`Cmd/Ctrl+K`), next to their shortcuts.
-
-To change effort one step without opening the picker, bind
-**Composer: Increase Effort** and **Composer: Decrease Effort** in Keybindings.
-Both are unbound by default. Increase wraps from the highest level to the
-lowest, and decrease wraps from the lowest level to the highest.
-
-In the model picker, press Left in an empty search field or Shift+Tab to reach
-the provider list. Use Up/Down to move and Enter to choose. Right returns to
-model search. Right at the end of the search moves to the highlighted model's effort
-levels, and Left comes back. Choosing a model keeps the picker open on its effort. `mod+shift+up` and `mod+shift+down` switch providers directly and clear the
-search. These provider shortcuts can also be changed in Settings.
-
-These shortcuts run inside the focused web or desktop client. `mod` uses Command
-on macOS and Ctrl on Windows and Linux, including GNOME, KDE Plasma, Niri, and
-Hyprland. If a custom desktop shortcut takes the same keys, choose another binding
-in Settings.
+In the model picker, use `Left`/`Shift+Tab` to move to the provider list, `Right` to return to search or move into effort levels, and `Up`/`Down`/`Enter` to select.
 
 ## Move through lists
 
-In menus, pickers, the command palette, and search results, `Ctrl+N` or `Cmd+N` moves to
-the next item and `Ctrl+P` or `Cmd+P` to the previous one, the same as Down and Up. While a
-list is open these win over New Thread and the file picker; everywhere else those
-shortcuts work as usual. This is not configurable in Settings.
+In menus, pickers, the command palette, and search results, `Ctrl+N` / `Cmd+N` and `Ctrl+P` / `Cmd+P` move to the next and previous item, like Down and Up. While a list is open they win over New Thread and the file picker. Not configurable.
 
-## Triage threads
+## Triage and navigate threads
 
-With a thread open, `mod+shift+s` settles it and `mod+alt+s` snoozes it. Both toggle:
-the same shortcut un-settles a settled thread or wakes a snoozed one. Snooze opens a
-list of wake times; type to filter it, press Enter to pick one, or choose **Custom…**
-for a date or duration. Type a duration such as `30m`, `5h`, `5d`, `2w`, or `1h 30m` to
-snooze for exactly that long. A thread waiting on an approval or question cannot be snoozed.
-The command palette (`Cmd/Ctrl+K`) has the same actions: **Settle thread**,
-**Un-settle thread**, **Snooze thread**, and **Wake thread**.
+- **Settle / snooze** (`mod+shift+s` / `mod+alt+s`): Both toggle, so the same shortcut un-settles or wakes the thread. Snooze opens a filterable list of wake times; type a duration such as `30m`, `5d`, or `1h 30m`, or choose **Custom…**. A thread waiting on an approval or question cannot be snoozed. The command palette has **Settle thread**, **Un-settle thread**, **Snooze thread**, and **Wake thread**.
+- **Previous / next thread** (`mod+shift+[` / `mod+shift+]`): Opens the adjacent sidebar thread.
+- **Previous / next needing attention** (`mod+alt+[` / `mod+alt+]`): Skips to the adjacent thread that has stopped working (blocked, failed, or finished, read or not), skipping working, snoozed, and settled threads and wrapping at either end. Needs the default sidebar.
+- **Last thread** (`ctrl+b l`): Switches between your two most recent threads (also **Go to last thread** in the palette). On Windows and Linux this chord replaces `Ctrl+B` for toggling the sidebar; rebind either one if you want both.
+- **Thread jumps** (`mod+shift+1`–`mod+shift+9`, desktop): Open the first nine threads. On macOS, the system screenshot shortcuts take `cmd+shift+3/4/5` first, so rebind those if needed. On the Usage page they pick the period instead.
+- **Half-page scroll** (`Ctrl+D` / `Ctrl+U`): Scrolls the conversation like vim, even while typing in the composer; hold to keep stepping. They use Ctrl on every platform and leave terminal and browser input alone. On Windows and Linux, the diff and Usage shortcuts also default to `Ctrl+D` / `Ctrl+U`, and the later rule wins; rebind **Thread: Scroll Half Page Down/Up**, **Diff: Toggle**, or **Usage: Open** to choose.
 
-`mod+shift+[` and `mod+shift+]` open the previous and next thread in the sidebar.
-`mod+alt+[` and `mod+alt+]` skip to the previous and next thread that needs you: any
-thread that has stopped working, whether it is blocked on an approval or question,
-failed, or simply finished, and whether or not you have read it. Working, snoozed, and
-settled threads are skipped, and the search wraps at either end. These two need the
-default sidebar rather than the legacy one.
+## Copy pull request and thread references
 
-The `ctrl+b l` chord goes back to the thread you had open before this one. Press it
-again to return, so it switches between your two most recent threads. The command
-palette has the same action as **Go to last thread**. On Windows and Linux this chord
-replaces `Ctrl+B` for toggling the sidebar; rebind either one in Settings if you
-want both.
+- `mod+shift+c`: Copies the open PR's URL (or copies a thread chip link when no PR is open).
+- `mod+shift+k`: Copies the open PR's `#number`.
 
-Change them in Settings under **Thread: Settle**, **Thread: Snooze**, **Thread: Previous
-Needing Attention**, **Thread: Next Needing Attention**, and **Thread: Last Opened**.
+Remap under **Copy Link or Thread** and **Copy Number** in **Settings → Keybindings**.
 
-`Ctrl+D` and `Ctrl+U` scroll the conversation down and up by half a screen, as in vim,
-even while you type in the composer. Hold either key to keep stepping. They use Ctrl on
-every platform and leave terminal and browser preview input alone. On Windows and Linux
-the diff and Usage shortcuts also default to `Ctrl+D` and `Ctrl+U`, and the later rule in
-your keybindings wins. Rebind **Thread: Scroll Half Page Down**, **Thread: Scroll Half
-Page Up**, **Diff: Toggle**, or **Usage: Open** to choose.
+## Find
 
-## Copy pull request references
+- **Current thread** (`chat.find`, default `mod+f` outside terminals/previews): Searches all messages and plans in the thread (requires an up-to-date server). Use `Enter` / `Shift+Enter` to step through matches and `Esc` to close.
+- **Diffs** (`mod+f` inside a diff or PR Code tab): Searches all loaded files in the diff, unfolding matching files. Not configurable. Very large uncommitted diffs only search files loaded so far.
+- **Browser page** (`preview.find`, default `mod+f` in a desktop browser tab): Searches the open page. If a page handles `mod+f` itself, use the browser's **⋮** menu. Not supported in web clients or streamed browser tabs.
 
-With a PR open in the right panel or on the Pull requests page, use `mod+shift+c`
-to copy its URL and `mod+shift+k` to copy its number with a `#` prefix.
-Both shortcuts can be changed in Settings. Search for “Copy Link or Thread”
-or “Copy Number”. They copy the selected PR and leave terminal input alone.
-Without a PR, `mod+shift+c` copies the thread itself, which pastes into a
-composer as a thread chip.
+## Hardware keyboards on iPad and Android
 
-## Find in a diff
-
-Click into a diff in the Diff panel or a pull request's Code tab, then press
-`mod+f` to search every file in it, including folded files and unchanged lines
-hidden between changes. Enter and `Shift+Enter` move between matches, and a
-match in a folded file opens it. Escape closes the search. This shortcut is not
-configurable. A very large uncommitted diff loads its files as you scroll, and
-find only searches the files loaded so far.
-
-## iPad
-
-With a hardware keyboard, use `Cmd+1` through `Cmd+9` to open the first nine
-displayed threads. The shortcuts follow the current list filters and order.
-`Cmd+K` opens the command palette to search commands, projects, and threads.
-Use the arrow keys and Return to choose a result, or `Cmd+1` through `Cmd+9` to
-choose directly. Escape or `Cmd+K` closes the palette. Start a search with `>`
-to show only actions.
-
-In a new thread, `Cmd+Shift+H` moves the draft to the next machine.
-
-In the composer, Return sends and `Shift+Return` inserts a new line. While a
-turn is running, `Cmd+Return` sends with the other follow-up action. To make
-Return insert a new line instead, change the Return key behavior in Settings →
-Keyboard; `Cmd+Return` then sends.
-
-## Android
-
-With a hardware keyboard, the composer handles Return as on iPad, with `Ctrl` in
-place of `Cmd`. The on-screen keyboard's Return always inserts a new line.
+- **iPad**: `Cmd+1`–`Cmd+9` open the first nine visible threads; `Cmd+K` opens the command palette (prefix with `>` for actions only); `Cmd+Shift+H` cycles host on a new thread. `Return` sends (`Shift+Return` for newline; `Cmd+Return` for opposite follow-up). Change Return behavior in **Settings → Keyboard**.
+- **Android**: Same composer Return behavior using `Ctrl` instead of `Cmd`. The on-screen keyboard's Return always inserts a newline.
 
 ## Edit the configuration file
 
-Keybindings live on the environment's machine, in
-`~/.t3/userdata/keybindings.json` by default. You can edit this file directly.
-It is a JSON array of rules:
+Keybindings are stored on the environment's machine at `~/.t3/userdata/keybindings.json` as a JSON array:
 
 ```json
 [
@@ -151,157 +70,59 @@ It is a JSON array of rules:
 ]
 ```
 
-T3 Code creates the file with its defaults and adds new defaults on later startups.
-New defaults do not replace commands you customized. If a new default overlaps one
-of your shortcuts, [rule order](#precedence) decides which runs.
-Invalid rules are ignored; if the file cannot be parsed, T3 Code uses defaults.
+New default bindings are added on startup without overwriting customized commands. Invalid rules are ignored; an unparseable file falls back to defaults.
 
-## Rule shape
+### Rule shape and key syntax
 
-Each rule requires a `key` shortcut and a `command` ID. An optional `when`
-expression restricts when it runs.
+Each rule requires `key` and `command`, plus an optional `when` condition. Project scripts use `script.{id}.run` (e.g. `script.test.run`).
 
-Project scripts use `script.{id}.run`, such as `script.test.run`.
+Join modifiers and keys with `+` (`mod`, `cmd`/`meta`, `ctrl`/`control`, `alt`/`option`, `shift`).
 
-## Key syntax
+### Chords
 
-Join modifiers and a key with `+`, such as `mod+shift+d` or `ctrl+l`.
-`mod` means Command on macOS and Control elsewhere. Other modifiers are
-`cmd` / `meta`, `ctrl` / `control`, `alt` / `option`, and `shift`.
-
-## Chords
-
-A chord runs a command from two keys in a row: a shortcut with a modifier, then one
-more key. Separate the steps with a space:
+A chord runs a command from two keys in a row, separated by a space:
 
 ```json
 { "key": "mod+g n", "command": "thread.next", "when": "!terminalFocus" }
 ```
 
-Press `mod+g`, release it, then press `n`. While T3 Code waits, a hint at the top
-of the window shows the first key. `Esc`, any key the chord does not use, or about
-a second and a half without a key cancels it. A cancelled chord swallows the key
-you pressed, so it never types into the composer.
+Press `mod+g`, release it, then press `n`. A hint at the top of the window shows the first key while T3 Code waits. `Esc`, any key the chord does not use, or about a second and a half without a key cancels it, and the cancelling key never types into the composer.
 
-In **Settings → Keybindings**, click a shortcut and press the first key, then press
-the second. A modified first key followed by a plain key records a chord.
+- **Recording**: In **Settings → Keybindings**, press a modified first key followed by a plain key to record a chord.
+- **Rules**: The first step must include `mod`, `ctrl`, `cmd`, or `alt`. The second step may carry modifiers (`mod+k mod+s`) but cannot be `Esc`. Chords work on web and desktop and never start while the terminal has focus. When a chord's first key matches a plain shortcut, [rule order](#precedence) decides.
 
-The first step must include `mod`, `ctrl`, `cmd`, or `alt`, so it can never be typed
-text. The second step is usually a plain key but may carry modifiers, such as
-`mod+k mod+s`. `Esc` cannot be a second step. Chords work in the web and desktop apps
-and never start while the terminal has focus. When a chord's first key matches a
-plain shortcut, [rule order](#precedence) decides which one runs.
+### When conditions
 
-## When conditions
+Available context keys: `terminalFocus`, `terminalOpen`, `previewFocus`, `previewOpen`, `rightPanelOpen`, `threadTabActive` (a thread tab is showing instead of the conversation), `modelPickerOpen`, `usagePageOpen`, `composerFocus`, `draftThreadRoute`, `turnRunning`, `composerEmpty`, `editableFocus`, `isWeb`, `isDesktop`. Unknown keys evaluate to `false`.
 
-Available context keys are `terminalFocus`, `terminalOpen`, `previewFocus`,
-`previewOpen`, `rightPanelOpen`, `threadTabActive`, `modelPickerOpen`, `usagePageOpen`,
-`composerFocus`, `draftThreadRoute`, `turnRunning`, `composerEmpty`, `editableFocus`, `isWeb`, and
-`isDesktop`.
-`threadTabActive` is true while one of a thread's tabs is showing instead of the conversation.
-In a thread, `rightPanelOpen` is true while its right panel is open; the default
-`mod+t` uses it to open the panel's new-tab menu.
-`draftThreadRoute` is true on a draft thread, including a restored draft, until it is first sent.
-`composerEmpty` is true while the composer has no text, attachments, or context, and is not
-editing a queued message or answering a question.
-`editableFocus` is true while a text field, the composer, or another editor has
-the keyboard. `isWeb` is true in a browser tab. `isDesktop` is true in the
-desktop app. Unknown keys evaluate to `false`.
-
-`mod+shift+1` through `mod+shift+9` jump to the first nine threads, and `mod+1`
-through `mod+9` choose a model while the model picker is open. Both defaults use
-`isDesktop`, so a browser keeps its own tab-switch shortcuts. Remove that
-condition in Settings if you want the same jumps in a browser. On macOS the system
-screenshot shortcuts take `cmd+shift+3`, `cmd+shift+4`, and `cmd+shift+5` before T3
-Code sees them, so rebind those jumps if you need them. On the Usage page,
-`mod+shift+1` through `mod+shift+4` pick the period instead of jumping to a thread.
-
-Combine keys with `!` for not, `&&` for and, `||` for or, and parentheses:
+Combine with `!`, `&&`, `||`, and parentheses:
 
 ```json
 { "key": "mod+j", "command": "terminal.toggle", "when": "terminalOpen && !terminalFocus" }
 ```
 
-## Find in the current thread
-
-`chat.find` searches conversation messages and proposed plans in the active thread. Entering a
-query searches the entire thread, including older messages. Thread search requires server support;
-update an older server to enable it. Select **Retry** if a search fails. It defaults to
-`mod+f` outside terminals and previews. Press **Enter** or **Shift+Enter** to move between matches,
-and **Escape** to close find.
-
-## Find on a browser page
-
-`preview.find` (`mod+f` while a browser has focus) searches the open page in the desktop app. It
-is also in the browser's **⋮** menu and the command palette. A page that handles `mod+f` itself,
-such as a code editor, keeps its own find. Use the **⋮** menu to reach the browser's find there.
-Streamed browser tabs and T3 Code in a web browser do not support it.
+> Tip: Thread jumps (`mod+shift+1`–`mod+shift+9`) and model picks (`mod+1`–`mod+9` in the model picker) default to `isDesktop` so they don't hijack browser tabs. Remove that condition in Settings if you want them on web.
 
 ## Precedence
 
-The last rule whose key and condition both match wins, even if it belongs to a
-different command. Put a more specific rule after a general one when they share
-a shortcut.
+The last matching rule in `keybindings.json` wins, even across different commands. Place more specific rules after general ones.
 
 ## Commands with special behavior
 
-`thread.stop` interrupts the running turn in the focused thread. It has no default
-shortcut; assign one in **Settings → Keybindings**.
+- `thread.stop`: Interrupts the running turn (unbound by default).
+- `thread.regenerateTitle`: Regenerates the focused thread's title (unbound by default).
+- `thread.undo` (`mod+z`): Undoes recent sidebar actions (unpin, settle, snooze, archive, discard draft) within 5 seconds, including consecutive actions of the same kind.
+- `navigation.back` (`mod+[`) / `navigation.forward` (`mod+]`): Moves through visited pages.
+- `thread.tab.1`–`thread.tab.9` (`alt+1`–`alt+9`): Switch a thread's [tabs](./thread-sidebar.md#work-in-tabs); `1` is the conversation. They work while a terminal has focus, and a number with no tab leaves the key to the terminal.
+- `thread.newTab` (`mod+t`) / `thread.closeTab` (`mod+w`): Open a thread tab or close the one showing. While the right panel is open, `mod+t` adds a right-panel tab instead, unless a terminal has focus.
+- `chat.new` / `chat.newLocal` / `chat.newWithoutProject` (`mod+alt+n`): Start new threads using your [new-thread defaults](./thread-sidebar.md#start-a-thread) or [without a project](./thread-sidebar.md#start-without-a-project).
 
-`thread.regenerateTitle` generates a new title for the focused thread, like
-**Regenerate title** in the thread menu. It has no default shortcut.
+## Reserved and platform shortcuts
 
-`thread.undo` (`mod+z` by default) reverses the actions shown in the notice at the
-bottom of the sidebar, such as unpin, settle, snooze, archive, or discarding a
-draft. Consecutive
-actions of the same kind undo together. The notice remains available for five
-seconds after the latest action. Right after an action, the shortcut works even
-in a text field such as the composer. Once you type or press another key, the
-field gets its own undo back. Terminals always keep their native shortcut.
-
-`thread.tab.1` through `thread.tab.9` (`alt+1` through `alt+9` by default) switch a
-thread's [tabs](./thread-sidebar.md#work-in-tabs): the first is the conversation and
-each later number is the next tab. They work while a terminal has focus. A number
-with no matching tab does nothing and the terminal keeps the key, so a shell or
-editor binding on `alt+digit` still works until that tab exists.
-
-`thread.newTab` (`mod+t`) opens a new tab in the thread, and `thread.closeTab` (`mod+w`)
-closes the tab that is showing. While the right panel is open, `mod+t` adds a tab to the
-right panel instead, unless a terminal has focus.
-
-`navigation.back` (`mod+[` by default) and `navigation.forward` (`mod+]`) move
-through the pages you have visited, like a browser's back and forward buttons.
-
-`chat.new` may ask you to choose a project when there is more than one.
-`chat.newLocal` skips that chooser. Both use your
-[new-thread defaults](./thread-sidebar.md#start-a-thread). `chat.newWithoutProject`
-(`mod+alt+n`) starts a thread [without a project](./thread-sidebar.md#start-without-a-project).
-
-## Reserved shortcuts
-
-In the desktop app, `mod+w` closes the focused terminal, the active tab, or the
-active right-panel tab. When nothing remains to close, it does nothing; it never closes the window. In a browser, `mod+w`
-closes the browser tab; rebind `thread.closeTab`, `rightPanel.close`, and `terminal.close`
-to an available shortcut such as `alt+w`. Browsers also keep `mod+t` for a new browser tab.
-
-`mod+shift+t` reopens the last closed tab across the app, including files,
-diffs, pull requests, browsers, and devices, in the order you closed them.
-A browser opens in a fresh session without its old page history. Incognito tabs
-can reopen until you reload or quit the app. This shortcut does not undo deleted work.
-Browsers also use it to reopen browser tabs; choose another binding in Settings
-if the browser takes it first.
-
-Many defaults include `!terminalFocus` so they do not intercept terminal input.
-Keep that condition when remapping them if you want the same behavior.
-`sidebar.toggle` never takes a Ctrl chord from a focused terminal, so tmux's `Ctrl+B`
-prefix reaches it. On macOS, `Cmd+B` still toggles the sidebar there.
+- `mod+w` (desktop): Closes the focused terminal, the active thread tab, or the active right-panel tab without closing the window. On web, browsers intercept `mod+w` and `mod+t`—rebind `thread.closeTab`, `rightPanel.close`, and `terminal.close` (e.g. `alt+w`), and `thread.newTab` and `rightPanel.new` for opening tabs.
+- `mod+shift+t`: Reopens the last closed panel tab (files, diffs, PRs, browsers, devices) in order. Browser tabs reopen as fresh sessions. Rebind on web if your browser intercepts it.
+- Keep `!terminalFocus` when remapping shortcuts that shouldn't intercept terminal input. `sidebar.toggle` ignores `Ctrl+B` inside terminals so `tmux` keeps its prefix (`Cmd+B` still works on macOS).
 
 ## Desktop quit shortcut
 
-Use `Cmd+Q` on macOS or `Ctrl+Q` on Windows and Linux. In the default **Hold** mode,
-hold for 1.2 seconds or press twice within 500 milliseconds. Holding requires
-keyboard repeat; if repeat is disabled, use two presses or the application menu.
-
-Change **Settings → General → Confirmations → Quit shortcut** to **Direct** for a
-single press or **Double press** for two presses only. Choosing **Quit** from the
-application menu always quits immediately.
+`Cmd+Q` (macOS) or `Ctrl+Q` (Windows/Linux) defaults to **Hold** mode: hold for 1.2 seconds or press twice within 500 ms. Change this in **Settings → General → Confirmations → Quit shortcut** to **Direct** or **Double press**. Quitting from the application menu always exits immediately.
