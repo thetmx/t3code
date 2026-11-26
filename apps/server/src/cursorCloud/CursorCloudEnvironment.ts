@@ -140,6 +140,8 @@ const make = Effect.gen(function* () {
             .map((key) => [key, undefined]),
         ),
         T3CODE_ENVIRONMENT_LABEL: LABEL,
+        // Agents work on Cursor's VMs, so a worktree per thread would only cost disk.
+        T3CODE_THREADS_IN_PROJECT_FOLDER: "1",
       },
       extendEnv: true,
       stdin: "ignore",

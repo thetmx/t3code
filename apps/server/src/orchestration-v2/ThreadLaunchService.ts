@@ -2,6 +2,7 @@ import * as WorktreeSetupTracker from "../project/WorktreeSetupTracker.ts";
 import * as ProjectCloneTracker from "../project/ProjectCloneTracker.ts";
 import * as TerminalManager from "../terminal/Manager.ts";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import {
   CommandId,
   type ChatAttachment,
@@ -304,6 +305,10 @@ const make = Effect.gen(function* () {
   const projections = yield* ProjectionStore.ProjectionStoreV2;
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
+  // Set for an environment whose agents work on another machine, such as Cursor Cloud, where a
+  // checkout per thread only costs disk.
+  const threadsInProjectFolder =
+    (yield* HostProcess.Environment).T3CODE_THREADS_IN_PROJECT_FOLDER === "1";
   // A project-folder launch that names no branch records the folder's checkout, as the composer does.
   const launchBranch = (strategy: ThreadLaunchWorkspaceStrategy, workspaceRoot: string) =>
     strategy.type === "root" && strategy.branch === undefined
@@ -1392,10 +1397,14 @@ const make = Effect.gen(function* () {
     });
 
   const schedulePreparation = Effect.fn("ThreadLaunchService.schedulePreparation")(function* (
-    input: PreparationInput,
+    requested: PreparationInput,
     threadId: ThreadId,
     runId: RunId | null,
   ) {
+    const { reusedWorktree: _reusedWorktree, ...inProjectFolder } = requested;
+    const input: PreparationInput = threadsInProjectFolder
+      ? { ...inProjectFolder, workspaceStrategy: { type: "root" } }
+      : requested;
     const preparation = Effect.gen(function* () {
       const prepare = Effect.acquireUseRelease(
         input.workspaceStrategy.type === "worktree"
