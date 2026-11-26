@@ -19,6 +19,8 @@ import * as NetService from "@t3tools/shared/Net";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
+import * as HttpClient from "effect/http/HttpClient";
+import * as HttpClientResponse from "effect/http/HttpClientResponse";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -32,7 +34,7 @@ import * as Schema from "effect/Schema";
 import * as ServerConfig from "../config.ts";
 import * as ProviderCredentialStore from "../provider/ProviderCredentialStore.ts";
 import { BUILT_IN_DRIVERS } from "../provider/builtInDrivers.ts";
-import { readLiveServerRuntimeState } from "../serverRuntimeState.ts";
+import { isProcessAlive, readLiveServerRuntimeState } from "../serverRuntimeState.ts";
 import * as ServerSettings from "../serverSettings.ts";
 
 const LABEL = "Cursor Cloud";
@@ -46,6 +48,9 @@ const encodeSidecarState = Schema.encodeEffect(SidecarState);
 const decodeSettings = Schema.decodeEffect(SettingsJson);
 const encodeSettings = Schema.encodeEffect(SettingsJson);
 const decodeInstances = Schema.decodeUnknownEffect(ProviderInstanceConfigMap);
+const decodeDescriptorResponse = HttpClientResponse.schemaBodyJson(
+  Schema.Struct({ environmentId: Schema.String }),
+);
 
 /** Only the Cursor provider, running on Cursor Cloud, so the environment has a single agent. */
 export function cursorCloudSettings(
@@ -96,6 +101,7 @@ const make = Effect.gen(function* () {
   const path = yield* Path.Path;
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const net = yield* NetService.NetService;
+  const httpClient = yield* HttpClient.HttpClient;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
   const hostEnvironment = yield* HostProcess.Environment;
   const command = yield* HostProcess.ExecutablePath;
@@ -150,14 +156,38 @@ const make = Effect.gen(function* () {
     Effect.orElseSucceed(() => null),
   );
 
+  const servesThisEnvironment = (origin: string) =>
+    Effect.all([
+      httpClient
+        .get(`${origin}/.well-known/t3/environment`)
+        .pipe(Effect.flatMap(decodeDescriptorResponse)),
+      readEnvironmentId,
+    ]).pipe(
+      Effect.map(([descriptor, environmentId]) => descriptor.environmentId === environmentId),
+      Effect.timeout("3 seconds"),
+      Effect.orElseSucceed(() => false),
+    );
+
   const sidecar = yield* Ref.make<Fiber.Fiber<never> | undefined>(undefined);
   const runSidecarOnce = Effect.fn("CursorCloudEnvironment.runSidecar")(
     function* (port: number) {
-      // A sidecar left behind by a crashed parent keeps serving; let it, and check again later.
+      // A server left behind by a crashed parent is stopped so the one below is supervised. Its
+      // record's address must answer as this environment, so a reused pid is never signalled.
       const live = yield* readLiveServerRuntimeState(paths.serverRuntimeStatePath).pipe(
         Effect.orElseSucceed(() => Option.none()),
       );
-      if (Option.isSome(live)) return yield* Effect.sleep("30 seconds");
+      if (Option.isSome(live) && (yield* servesThisEnvironment(live.value.origin))) {
+        const { pid } = live.value;
+        // It may have exited since the record was read.
+        yield* Effect.try({ try: () => process.kill(pid, "SIGTERM"), catch: () => pid }).pipe(
+          Effect.ignore,
+        );
+        yield* Effect.sync(() => isProcessAlive(pid)).pipe(
+          Effect.repeat({ until: (alive) => !alive, schedule: Schedule.spaced("200 millis") }),
+          Effect.timeout("10 seconds"),
+          Effect.ignore,
+        );
+      }
       const child = yield* spawner.spawn(
         self(["serve", "--host", "127.0.0.1", "--port", String(port)]),
       );
@@ -196,11 +226,10 @@ const make = Effect.gen(function* () {
     );
   });
 
-  // Reuse this machine's Cursor sign-in so the new environment needs no second one.
+  // Reuse this machine's current Cursor sign-in so the new environment needs no second one.
   const copySignIn = Effect.gen(function* () {
     const target = yield* credentials(CURSOR_INSTANCE);
     const targetPath = path.join(paths.secretsDir, `${target.binding.key}.bin`);
-    if (yield* fileSystem.exists(targetPath)) return;
     const { providerInstances } = yield* serverSettings.getSettings;
     // The default instance is absent from settings until someone edits it.
     const instanceIds = new Set([
