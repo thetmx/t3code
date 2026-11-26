@@ -1,16 +1,27 @@
 import type { AgentOptions, RunResult } from "@cursor/sdk";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ProviderSessionId, ThreadId } from "@t3tools/contracts";
+import { ProviderInstanceId, ProviderSessionId, ThreadId } from "@t3tools/contracts";
+import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
+import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
+import * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import * as TestProviderHost from "@t3tools/provider-testing/TestProviderHost";
 import { spawnAndCollect } from "@t3tools/provider-core/server/snapshotProbe";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as FetchHttpClient from "effect/http/FetchHttpClient";
+import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as ChildProcess from "effect/process/ChildProcess";
 import { describe, expect, it } from "vite-plus/test";
 
-import type * as CursorAgentSdk from "./CursorAgentSdk.ts";
-import { cursorCloudAgentOptions, cursorCloudRepoUrl, cursorCloudRunner } from "./cloud.ts";
+import { makeCursorAdapterV2 } from "./adapter.ts";
+import * as CursorAgentSdk from "./CursorAgentSdk.ts";
+import {
+  cursorCloudAgentOptions,
+  cursorCloudRepoUrl,
+  cursorCloudRunner,
+  forRuntime,
+} from "./cloud.ts";
 
 const git = Effect.fn(function* (cwd: string, ...args: Array<string>) {
   const result = yield* spawnAndCollect(
@@ -133,6 +144,46 @@ describe("cursorCloudRunner", () => {
     }).pipe(
       Effect.scoped,
       Effect.provide([NodeServices.layer, FetchHttpClient.layer]),
+      Effect.runPromise,
+    ));
+});
+
+describe("forRuntime", () => {
+  it("puts cloud capabilities on the session record orchestration reads", async () =>
+    await Effect.gen(function* () {
+      const workspace = yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped({
+        prefix: "cursor-cloud-session-",
+      });
+      const instanceId = ProviderInstanceId.make("cursor");
+      const adapter = yield* makeCursorAdapterV2({ instanceId, environment: {} }).pipe(
+        forRuntime("cloud"),
+        Effect.provideService(CursorAgentSdk.CursorAgentSdkRunner, {
+          assertComplete: Effect.void,
+          open: () => Effect.die("unused"),
+        }),
+        Effect.provide(TestProviderHost.layer({ cwd: workspace })),
+      );
+      const runtime = yield* adapter.openSession({
+        threadId: ThreadId.make("thread-1"),
+        providerSessionId: ProviderSessionId.make("session-1"),
+        modelSelection: { instanceId, model: "composer-2.5" },
+        runtimePolicy: ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          cwd: workspace,
+        }),
+      });
+      const { threads, turns } = runtime.providerSession.capabilities;
+      expect([threads.canRollbackThread, turns.supportsSteeringByInterruptRestart]).toEqual([
+        false,
+        false,
+      ]);
+      expect(yield* adapter.getCapabilities()).toEqual(runtime.providerSession.capabilities);
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        Layer.mergeAll(NodeServices.layer, IdAllocator.layer, McpProviderSessions.layer),
+      ),
       Effect.runPromise,
     ));
 });

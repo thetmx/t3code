@@ -5,12 +5,16 @@
  * @module provider-cursor/server/cloud
  */
 import type { AgentOptions, RunResult, SendOptions } from "@cursor/sdk";
-import type { OrchestrationV2ProviderCapabilities } from "@t3tools/contracts";
+import type {
+  OrchestrationV2ProviderCapabilities,
+  OrchestrationV2ProviderSession,
+} from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
+import * as Stream from "effect/Stream";
 import * as McpProviderSessions from "@t3tools/provider-core/server/McpProviderSessions";
 import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
 import { spawnAndCollect } from "@t3tools/provider-core/server/snapshotProbe";
@@ -53,7 +57,12 @@ function cursorCloudCapabilities(
   return {
     ...capabilities,
     threads: { ...capabilities.threads, canReadThreadSnapshot: false, canRollbackThread: false },
-    turns: { ...capabilities.turns, supportsNativeResume: false, supportsActiveSteering: false },
+    turns: {
+      ...capabilities.turns,
+      supportsNativeResume: false,
+      supportsActiveSteering: false,
+      supportsSteeringByInterruptRestart: false,
+    },
     tools: { ...capabilities.tools, supportsBackgroundWait: false },
     context: { ...capabilities.context, canGenerateSummaries: false },
     checkpointing: {
@@ -64,6 +73,11 @@ function cursorCloudCapabilities(
     },
   };
 }
+
+const withCloudCapabilities = (session: OrchestrationV2ProviderSession) => ({
+  ...session,
+  capabilities: cursorCloudCapabilities(session.capabilities),
+});
 
 export const makeCursorCloudRunner = Effect.fn("makeCursorCloudRunner")(function* (
   local: CursorAgentSdk.CursorAgentSdkRunner["Service"],
@@ -206,5 +220,23 @@ export const forRuntime =
             ...adapter,
             getCapabilities: () =>
               adapter.getCapabilities().pipe(Effect.map(cursorCloudCapabilities)),
+            // Orchestration reads the capabilities each session record carries.
+            openSession: (input) =>
+              adapter.openSession(input).pipe(
+                Effect.map((runtime) => ({
+                  ...runtime,
+                  providerSession: withCloudCapabilities(runtime.providerSession),
+                  events: runtime.events.pipe(
+                    Stream.map((event) =>
+                      event.type === "provider_session.updated"
+                        ? {
+                            ...event,
+                            providerSession: withCloudCapabilities(event.providerSession),
+                          }
+                        : event,
+                    ),
+                  ),
+                })),
+              ),
           })),
         );
