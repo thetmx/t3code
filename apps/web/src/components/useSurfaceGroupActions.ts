@@ -10,12 +10,13 @@ import {
   type PreviewSessionSnapshot,
   type ScopedThreadRef,
 } from "@t3tools/contracts";
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { sideThreadComposer, sideThreadKindOf } from "@t3tools/client-runtime/side-thread";
 import { projectScriptRuntimeEnv } from "@t3tools/shared/projectScripts";
 import { nextTerminalId } from "@t3tools/shared/terminalLabels";
 import { getTerminalLabel } from "@t3tools/shared/terminalLabelsCopy";
 import { readEnvironmentScope } from "../state/session";
+import { useClosedViewStore } from "../closedViewStore";
 
 import { isBrowserSettingsReadError } from "../browser/openFileInPreview";
 import { useDiffPanelStore } from "../diffPanelStore";
@@ -32,10 +33,11 @@ import {
 } from "../previewStateStore";
 import {
   selectActiveRightPanelSurface,
+  selectThreadRightPanelState,
   useRightPanelStore,
   type RightPanelSurface,
 } from "../rightPanelStore";
-import { readThreadShell } from "../state/entities";
+import { readThreadShell, waitForThreadShellRemoval } from "../state/entities";
 import { previewEnvironment } from "../state/preview";
 import { terminalEnvironment } from "../state/terminal";
 import { threadEnvironment } from "../state/threads";
@@ -68,7 +70,6 @@ interface SurfaceGroupInput {
   requestTerminalFocus: () => void;
   previewSessions: Readonly<Record<string, PreviewSessionSnapshot>>;
   previewDesktopByTabId: Readonly<Record<string, DesktopPreviewOverlay>>;
-  isServerThread: boolean;
   /** The thread has a diff to show: a Git folder, or turns that changed tracked repositories. */
   diffAvailable: boolean;
   /** Whether a diff is already showing, so activating one only announces the first. */
@@ -101,7 +102,6 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
     requestTerminalFocus,
     previewSessions,
     previewDesktopByTabId,
-    isServerThread,
     diffAvailable,
     diffOpen,
     onDiffPanelOpen,
@@ -153,7 +153,7 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
     if (snapshot) void openBrowserTab(undefined, snapshot);
   };
   const addDiff = () => {
-    if (!groupRef || !threadRef || !isServerThread || !diffAvailable) return;
+    if (!groupRef || !threadRef || !diffAvailable) return;
     useDiffPanelStore.getState().selectGitScope(threadRef, "branch");
     useRightPanelStore.getState().open(groupRef, "diff");
     onDiffPanelOpen?.();
@@ -351,10 +351,26 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
           .sideChat === true &&
         readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope)
       ) {
-        // The server keeps a side chat with a run or message. Reopen skips one it deleted.
+        const sideChatRef = scopeThreadRef(threadRef.environmentId, surface.threadId);
+        const closedFrom = groupRef;
+        // The server keeps a side chat with a run or message. Reopen cannot tell one it deleted from
+        // an idle subagent the shell leaves out, so forget the tab once the server has removed it.
         void deleteThread({
           environmentId: threadRef.environmentId,
           input: { threadId: surface.threadId, onlyIfUnused: true },
+        }).then(async (result) => {
+          if (result._tag !== "Success" || !(await waitForThreadShellRemoval(sideChatRef))) return;
+          const closedViews = useClosedViewStore.getState();
+          for (const entry of closedViews.entries) {
+            if (
+              entry.kind === "panel-tab" &&
+              entry.surface.id === surface.id &&
+              closedFrom !== null &&
+              scopedThreadKey(entry.threadRef) === scopedThreadKey(closedFrom)
+            ) {
+              closedViews.remove(entry.id);
+            }
+          }
         });
       }
     }
@@ -387,19 +403,28 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
       setActivePreviewTab(threadRef, nextActiveSurface.resourceId);
     }
   };
-  const finishClose = (closing: readonly RightPanelSurface[]) => {
+  const finishClose = (toClose: readonly RightPanelSurface[]) => {
     if (!groupRef) return;
     const store = useRightPanelStore.getState();
     const activeId = selectActiveRightPanelSurface(store.byThreadKey, groupRef)?.id;
-    const ordered = closing.toSorted(
-      (left, right) => Number(left.id === activeId) - Number(right.id === activeId),
+    const openIds = new Set(
+      selectThreadRightPanelState(store.byThreadKey, groupRef).surfaces.map(
+        (surface) => surface.id,
+      ),
     );
-    for (const surface of ordered) {
-      // Releasing a browser drops its session, which prunes the tab automatically; close it
-      // first so the close stays a user action that hides the panel after the last tab.
-      store.closeSurface(groupRef, surface.id);
-      cleanupSurfaces([surface]);
-    }
+    const closing = toClose.filter((surface) => openIds.has(surface.id));
+    if (closing.length === 0) return;
+    // Close the tabs before releasing sessions, which can prune the tabs during reconciliation.
+    store.closeSurfaces(
+      groupRef,
+      closing.map((surface) => surface.id),
+    );
+    // The active tab's session closes last so reopening restores it first.
+    cleanupSurfaces(
+      closing.toSorted(
+        (left, right) => Number(left.id === activeId) - Number(right.id === activeId),
+      ),
+    );
     syncActivePreviewSurface();
     if (
       selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, groupRef)?.id !==
@@ -492,6 +517,7 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
   const closeOthersStable = useStableCallback(closeOthers);
   const closeToRightStable = useStableCallback(closeToRight);
   const closeAllStable = useStableCallback(closeAll);
+  const closeSelectedStable = useStableCallback(closeConfirmed);
   return {
     addBrowser: addBrowserStable,
     duplicateBrowser: duplicateBrowserStable,
@@ -512,5 +538,6 @@ export function useSurfaceGroupActions(input: SurfaceGroupInput) {
     closeOthers: closeOthersStable,
     closeToRight: closeToRightStable,
     closeAll: closeAllStable,
+    closeSelected: closeSelectedStable,
   };
 }

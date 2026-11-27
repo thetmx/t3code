@@ -55,6 +55,7 @@ async function renderPanel(overrides: PanelProps, platform = "MacIntel") {
       terminalLabelsById={new Map()}
       onActivate={noop}
       onCloseSurface={noop}
+      onCloseSelectedSurfaces={noop}
       onCloseOtherSurfaces={noop}
       onCloseSurfacesToRight={noop}
       onCloseAllSurfaces={noop}
