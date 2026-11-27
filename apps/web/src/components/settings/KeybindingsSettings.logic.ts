@@ -544,6 +544,7 @@ const COMMAND_LABELS: Partial<Record<KeybindingCommand, string>> = {
   "composer.workspace": msg("Composer: Workspace"),
   "composer.previousWorktree": msg("Composer: Previous Worktree"),
   "composer.branch": msg("Composer: Branch"),
+  "composer.environment": msg("Composer: Environment"),
   "chat.new": msg("Chat: New"),
   "chat.newLocal": msg("Chat: New Local"),
   "chat.newWithoutProject": msg("Chat: New Without Project"),
@@ -559,6 +560,11 @@ const COMMAND_LABELS: Partial<Record<KeybindingCommand, string>> = {
   "thread.pin": msg("Thread: Pin"),
   "thread.regenerateTitle": msg("Thread: Regenerate Title"),
   "thread.undo": msg("Thread: Undo"),
+  "thread.snooze": msg("Thread: Snooze"),
+  "thread.newTab": msg("Thread: New Tab"),
+  "thread.closeTab": msg("Thread: Close Tab"),
+  "thread.scrollHalfPageDown": msg("Thread: Scroll Half Page Down"),
+  "thread.scrollHalfPageUp": msg("Thread: Scroll Half Page Up"),
 };
 
 // Whole labels: search titles keep the encoded message, which cannot nest another one.
@@ -591,6 +597,9 @@ export function commandLabel(command: KeybindingCommand, resolve: MessageResolve
   const raw = String(command);
   if (raw.startsWith("thread.jump.")) {
     return resolve(msg("Thread: Jump: {n}", { n: raw.slice("thread.jump.".length) }));
+  }
+  if (raw.startsWith("thread.tab.")) {
+    return resolve(msg("Thread: Tab: {n}", { n: raw.slice("thread.tab.".length) }));
   }
   if (raw.startsWith("modelPicker.jump.")) {
     return resolve(msg("Model Picker: Jump: {n}", { n: raw.slice("modelPicker.jump.".length) }));
