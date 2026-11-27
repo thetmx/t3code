@@ -1,4 +1,5 @@
 import * as DocumentText from "../provider/DocumentText.ts";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Scheduler from "../scheduling/Scheduler.ts";
 import * as WorktreeSetupTracker from "../project/WorktreeSetupTracker.ts";
 import * as ProjectCloneTracker from "../project/ProjectCloneTracker.ts";
@@ -1356,6 +1357,73 @@ it.effect("records the checkout's branch on a root launch that names none", () =
     const { thread } = yield* threads.getThreadProjection(launched.threadId);
     assert.equal(thread.branch, "fix/checkout-total");
   }).pipe(Effect.provide(harness.layer));
+});
+
+it.effect("launches a worktree request in the project folder when the environment asks", () => {
+  const harness = makeHarness();
+  return Effect.gen(function* () {
+    const launches = yield* ThreadLaunch.ThreadLaunchService;
+    const launched = yield* launches.launch(
+      launchInput({
+        command: "command:launch:project-folder-only",
+        thread: "thread:launch:project-folder-only",
+        message: "Build the feature",
+        workspace: worktreeStrategy,
+      }),
+    );
+    const prepared = yield* preparationSettled(launched.threadId);
+    assert.equal(prepared.runs[0]?.status, "starting");
+    assert.deepEqual(prepared.runs[0]?.workspacePreparation, { type: "root" });
+    assert.equal(prepared.thread.worktreePath, null);
+
+    // A client's new thread asks the orchestrator, which records the run's workspace itself.
+    const threads = yield* ThreadManagement.ThreadManagementService;
+    const input = launchInput({
+      command: "command:launch:project-folder-client",
+      thread: "thread:launch:project-folder-client",
+      message: "Build it from the client",
+      workspace: worktreeStrategy,
+    });
+    yield* threads.dispatch({
+      type: "thread.create",
+      commandId: input.commandId,
+      threadId: input.threadId,
+      projectId: input.projectId,
+      title: input.title,
+      modelSelection: input.modelSelection,
+      runtimeMode: input.runtimeMode,
+      interactionMode: input.interactionMode,
+      branch: null,
+      worktreePath: null,
+      createdBy: input.createdBy,
+      creationSource: input.creationSource,
+      initialMessage: {
+        messageId: MessageId.make("message:launch:project-folder-client"),
+        text: "Build it from the client",
+        attachments: [],
+        workspaceStrategy: worktreeStrategy,
+      },
+    });
+    const { runs } = yield* threads.getThreadProjection(input.threadId);
+    assert.deepEqual(runs[0]?.workspacePreparation, { type: "root" });
+    yield* launches.prepareRun({
+      commandId: input.commandId,
+      threadId: input.threadId,
+      runId: runs[0]!.id,
+    });
+    const client = yield* preparationSettled(input.threadId);
+    assert.equal(client.runs[0]?.status, "starting");
+    assert.equal(client.thread.worktreePath, null);
+    assert.equal(harness.createWorktree.mock.calls.length, 0);
+  }).pipe(
+    Effect.provide(
+      harness.layer.pipe(
+        Layer.provide(
+          Layer.succeed(HostProcess.Environment, { T3CODE_THREADS_IN_PROJECT_FOLDER: "1" }),
+        ),
+      ),
+    ),
+  );
 });
 
 it.effect("launches a worktree request for Scratch at the root, in its own folder", () => {

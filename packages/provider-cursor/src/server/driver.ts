@@ -38,6 +38,7 @@ import { probeCursorSkills } from "./skills.ts";
 import { makeCursorAuth } from "./auth.ts";
 import * as CursorCredentialStore from "./credentialStore.ts";
 import * as CursorAgentSdk from "./CursorAgentSdk.ts";
+import * as CursorCloud from "./cloud.ts";
 import * as CursorSdk from "./CursorSdk.ts";
 import * as CursorUsageAccounts from "./CursorUsageAccounts.ts";
 
@@ -99,7 +100,11 @@ export const CursorDriver: ProviderDriver<
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const httpClient = yield* HttpClient.HttpClient;
-    const sdkRunner = yield* CursorAgentSdk.CursorAgentSdkRunner;
+    const localRunner = yield* CursorAgentSdk.CursorAgentSdkRunner;
+    const sdkRunner =
+      config.runtime === "cloud"
+        ? yield* CursorCloud.makeCursorCloudRunner(localRunner)
+        : localRunner;
     const processEnv = yield* mergeProviderInstanceEnvironment(environment);
     const continuationIdentity = defaultProviderContinuationIdentity({
       driverKind: DRIVER_KIND,
@@ -172,6 +177,7 @@ export const CursorDriver: ProviderDriver<
       getModels: () => catalogModels,
       getSdkModels: () => catalogSdkModels,
     }).pipe(
+      CursorCloud.forRuntime(config.runtime),
       Effect.provideService(CursorAgentSdk.CursorAgentSdkRunner, {
         ...sdkRunner,
         open: (input) =>

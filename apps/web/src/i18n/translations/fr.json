@@ -13098,5 +13098,10 @@
       "v": "v"
     },
     " de plus dans Éléments associés"
-  ]
+  ],
+  "8bcf21c22f6fa24c": "Cursor Cloud",
+  "2c5674665579a329": "Retirer",
+  "e2255a06e773efde": "Cursor Cloud est un environnement à part entière. Ses agents s’exécutent sur les machines virtuelles de Cursor.",
+  "eb12469436215a4c": "Cursor Cloud s’exécute sur cet ordinateur, mais cette app n’y est pas connectée.",
+  "32013ad34bd530eb": "Ajoutez un environnement dont les agents s’exécutent sur les machines virtuelles de Cursor. Il fonctionne à côté du serveur de cet ordinateur et utilise votre connexion Cursor."
 }

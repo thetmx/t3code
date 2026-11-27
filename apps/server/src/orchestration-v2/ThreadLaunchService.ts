@@ -71,6 +71,7 @@ import { DispatchModeLimit } from "./DispatchModeLimit.ts";
 import * as ThreadManagement from "./ThreadManagementService.ts";
 import { isWithinRoot } from "../workspace/KnownWorkspaces.ts";
 import * as TaskFolders from "../workspace/TaskFolders.ts";
+import * as ProjectFolderThreads from "../cursorCloud/projectFolderThreads.ts";
 
 // The agent waits for its branch name; a rate-limited provider would hold it for minutes.
 const BRANCH_NAME_TIMEOUT = "20 seconds";
@@ -304,6 +305,7 @@ const make = Effect.gen(function* () {
   const projections = yield* ProjectionStore.ProjectionStoreV2;
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
+  const projectFolderOnly = yield* ProjectFolderThreads.threadsInProjectFolder;
   // A project-folder launch that names no branch records the folder's checkout, as the composer does.
   const launchBranch = (strategy: ThreadLaunchWorkspaceStrategy, workspaceRoot: string) =>
     strategy.type === "root" && strategy.branch === undefined
@@ -1445,11 +1447,11 @@ const make = Effect.gen(function* () {
 
   const launch: ThreadLaunchService["Service"]["launch"] = Effect.fn("ThreadLaunchService.launch")(
     function* (request) {
-      // Scratch has no Git repository. Normalize before folder allocation so
-      // durable preparation and retries use the thread's own Scratch folder.
+      // Scratch has no Git repository, and some environments keep threads in the project
+      // folder. Normalize before folder allocation so durable preparation and retries agree.
       const input: ThreadLaunchInput =
         request.workspaceStrategy.type === "worktree" &&
-        (yield* managedFolders.isScratchProject(request.projectId))
+        (projectFolderOnly || (yield* managedFolders.isScratchProject(request.projectId)))
           ? { ...request, workspaceStrategy: { type: "root" } }
           : request;
       yield* ProjectCloneTracker.rejectCommandsDuringClone(cloneTracker, {

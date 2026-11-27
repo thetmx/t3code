@@ -85,6 +85,7 @@ import {
   managedRuntimeModeCeilingMessage,
 } from "@t3tools/contracts";
 import * as KeyedLock from "@t3tools/shared/KeyedLock";
+import * as ProjectFolderThreads from "../cursorCloud/projectFolderThreads.ts";
 import { modelSelectionsEqual } from "@t3tools/shared/model";
 import { expandAssistantCitationsForProvider } from "@t3tools/shared/assistantCitations";
 import { modelSwitchSince } from "./modelSwitch.ts";
@@ -1663,6 +1664,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
   const projects = yield* ProjectStore.ProjectStoreV2;
   const taskFolderStore = yield* TaskFolderStore.TaskFolderStore;
   const worktreeSetupTracker = yield* WorktreeSetupTracker.WorktreeSetupTracker;
+  const projectFolderOnly = yield* ProjectFolderThreads.threadsInProjectFolder;
   const projectionStore = yield* ProjectionStoreV2;
   const effectOutbox = yield* EffectOutbox.EffectOutboxV2;
   const nextTurnItemOrdinal = (
@@ -8753,7 +8755,11 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           ? {}
           : { usageLimitContinuationOfRunId: command.usageLimitContinuationOfRunId }),
         ...(dispatchMode.type === "defer_start" && dispatchMode.workspaceStrategy !== undefined
-          ? { workspacePreparation: dispatchMode.workspaceStrategy }
+          ? {
+              workspacePreparation: projectFolderOnly
+                ? ProjectFolderThreads.inProjectFolder(dispatchMode.workspaceStrategy)
+                : dispatchMode.workspaceStrategy,
+            }
           : {}),
         ...(continuedTaskId === undefined ? {} : { delegatedTaskId: continuedTaskId }),
         ...wakeWorkStartedAt(projection, command),

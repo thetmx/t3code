@@ -13105,5 +13105,10 @@
       "v": "v"
     },
     " till i Länkade objekt"
-  ]
+  ],
+  "8bcf21c22f6fa24c": "Cursor Cloud",
+  "2c5674665579a329": "Ta bort",
+  "e2255a06e773efde": "Cursor Cloud är en egen miljö. Dess agenter körs på Cursors virtuella maskiner.",
+  "eb12469436215a4c": "Cursor Cloud körs på den här datorn, men den här appen är inte ansluten till den.",
+  "32013ad34bd530eb": "Lägg till en miljö vars agenter körs på Cursors virtuella maskiner. Den körs bredvid den här datorns server och använder din Cursor-inloggning."
 }

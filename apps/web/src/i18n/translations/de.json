@@ -13098,5 +13098,10 @@
       "v": "v"
     },
     " weitere unter Verknüpfte Elemente"
-  ]
+  ],
+  "8bcf21c22f6fa24c": "Cursor Cloud",
+  "2c5674665579a329": "Entfernen",
+  "e2255a06e773efde": "Cursor Cloud ist eine eigene Umgebung. Ihre Agenten laufen auf den VMs von Cursor.",
+  "eb12469436215a4c": "Cursor Cloud läuft auf diesem Computer, aber diese App ist nicht damit verbunden.",
+  "32013ad34bd530eb": "Füge eine Umgebung hinzu, deren Agenten auf den VMs von Cursor laufen. Sie läuft neben dem Server dieses Computers und verwendet deine Cursor-Anmeldung."
 }

@@ -13098,5 +13098,10 @@
       "v": "v"
     },
     " mais em Itens vinculados"
-  ]
+  ],
+  "8bcf21c22f6fa24c": "Cursor Cloud",
+  "2c5674665579a329": "Remover",
+  "e2255a06e773efde": "O Cursor Cloud é um ambiente próprio. Os agentes dele rodam nas VMs do Cursor.",
+  "eb12469436215a4c": "O Cursor Cloud está rodando neste computador, mas este app não está conectado a ele.",
+  "32013ad34bd530eb": "Adicione um ambiente cujos agentes rodam nas VMs do Cursor. Ele roda ao lado do servidor deste computador e usa seu login do Cursor."
 }

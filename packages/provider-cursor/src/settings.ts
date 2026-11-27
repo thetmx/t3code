@@ -15,6 +15,10 @@ export const CursorSettings = makeProviderSettingsSchema(
     apiEndpoint: Schema.optionalKey(TrimmedString).pipe(
       Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
     ),
+    // "cloud" runs agents on Cursor Cloud VMs; see docs/user/cursor.md#cursor-cloud.
+    runtime: Schema.optionalKey(Schema.Literals(["local", "cloud"])).pipe(
+      Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
+    ),
     customModels: Schema.Array(CustomModelSetting).pipe(
       Schema.withDecodingDefault(Effect.succeed([])),
       Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
