@@ -4,7 +4,7 @@
  *
  * @module provider-cursor/server/cloud
  */
-import type { AgentOptions, SendOptions } from "@cursor/sdk";
+import type { AgentOptions, ModelSelection, SendOptions } from "@cursor/sdk";
 import type {
   OrchestrationV2ProviderCapabilities,
   OrchestrationV2ProviderSession,
@@ -35,20 +35,31 @@ export function cursorCloudRepoUrl(remote: string): string {
   }
 }
 
+// The cloud API rejects the local-only `maxMode` key; the model's params pick the variant.
+function cursorCloudModel(model: ModelSelection | undefined) {
+  if (model === undefined) return {};
+  const { maxMode: _maxMode, ...cloudModel } = model;
+  return { model: cloudModel };
+}
+
 export function cursorCloudAgentOptions(
   options: AgentOptions,
   repo: { readonly url: string; readonly startingRef?: string } | undefined,
 ): AgentOptions {
   // Local workspace settings and T3's loopback MCP servers mean nothing on Cursor's VM.
-  const { local: _local, mcpServers: _mcpServers, ...shared } = options;
+  const { local: _local, mcpServers: _mcpServers, model, ...shared } = options;
   // The VM's work never reaches the local checkout, so a pull request is how it comes back.
-  return { ...shared, cloud: { ...(repo ? { repos: [repo] } : {}), autoCreatePR: true } };
+  return {
+    ...shared,
+    ...cursorCloudModel(model),
+    cloud: { ...(repo ? { repos: [repo] } : {}), autoCreatePR: true },
+  };
 }
 
 function cursorCloudSendOptions(options: Omit<SendOptions, "onDelta"> | undefined) {
   if (options === undefined) return undefined;
-  const { local: _local, mcpServers: _mcpServers, ...shared } = options;
-  return shared;
+  const { local: _local, mcpServers: _mcpServers, model, ...shared } = options;
+  return { ...shared, ...cursorCloudModel(model) };
 }
 
 function cursorCloudCapabilities(

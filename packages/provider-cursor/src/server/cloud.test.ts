@@ -52,7 +52,7 @@ describe("cursorCloudAgentOptions", () => {
     expect(
       cursorCloudAgentOptions(
         {
-          model: { id: "composer-2.5" },
+          model: { id: "composer-2.5", params: [{ id: "context", value: "1m" }], maxMode: true },
           mode: "agent",
           local: { cwd: "/repo" },
           mcpServers: { t3: { type: "http", url: "http://127.0.0.1:1/mcp" } },
@@ -60,7 +60,7 @@ describe("cursorCloudAgentOptions", () => {
         { url: "https://github.com/acme/app", startingRef: "main" },
       ),
     ).toEqual({
-      model: { id: "composer-2.5" },
+      model: { id: "composer-2.5", params: [{ id: "context", value: "1m" }] },
       mode: "agent",
       cloud: {
         repos: [{ url: "https://github.com/acme/app", startingRef: "main" }],
@@ -120,14 +120,14 @@ describe("cursorCloudRunner", () => {
       });
       const run = yield* session.send({
         message: "go",
-        options: { mode: "agent", mcpServers: {} },
+        options: { model: { id: "claude-opus-5-5", maxMode: true }, mode: "agent", mcpServers: {} },
       });
       yield* run.wait;
 
       expect(opened[0]?.cloud?.repos).toEqual([
         { url: cursorCloudRepoUrl(origin), startingRef: "main" },
       ]);
-      expect(sent).toEqual([{ mode: "agent" }]);
+      expect(sent).toEqual([{ model: { id: "claude-opus-5-5" }, mode: "agent" }]);
     }).pipe(
       Effect.scoped,
       Effect.provide([NodeServices.layer, FetchHttpClient.layer]),

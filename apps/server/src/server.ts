@@ -37,6 +37,7 @@ import * as BackgroundPolicy from "./background/BackgroundPolicy.ts";
 import * as HostPowerMonitor from "./background/HostPowerMonitor.ts";
 import * as KeepAwake from "./background/KeepAwake.ts";
 import * as CursorCloudEnvironment from "./cursorCloud/CursorCloudEnvironment.ts";
+import * as CursorCloudPullRequestLinker from "./cursorCloud/CursorCloudPullRequestLinker.ts";
 import * as ServerConfig from "./config.ts";
 import { withRootRequestSpans, withUntracedRequests } from "./http.ts";
 import * as ServerHttp from "./http.ts";
@@ -789,6 +790,7 @@ const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   layerProjectDirectoryDiscovery,
   KeepAwake.layer,
   CursorCloudEnvironment.layer,
+  CursorCloudPullRequestLinker.layer,
   DelegatedTaskAnalytics.layer,
   Layer.effectDiscard(
     Effect.gen(function* () {
