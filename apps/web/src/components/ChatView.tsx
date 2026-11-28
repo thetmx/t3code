@@ -3069,9 +3069,12 @@ export default function ChatView(props: ChatViewProps) {
         ? sideActions
         : null;
   const rightPanelTabsRef = useRef<RightPanelTabsHandle>(null);
+  const threadTabStripRef = useRef<RightPanelTabsHandle>(null);
+  // A selected range is an explicit target, so it wins over either strip's active tab.
   const closeActiveRightPanelSurfaceStable = useStableCallback(() => {
+    if (rightPanelTabsRef.current?.closeSelectedTabs()) return;
+    if (threadTabStripRef.current?.closeSelectedTabs()) return;
     if (activeTabSurface) tabsActions.close(activeTabSurface);
-    else if (rightPanelTabsRef.current?.closeSelectedTabs()) return;
     else if (activeRightPanelSurface) sideActions.close(activeRightPanelSurface);
   });
 
@@ -3104,7 +3107,7 @@ export default function ChatView(props: ChatViewProps) {
       },
       "thread.closeTab": ({ event }) => {
         if (!activeTabSurface) return false;
-        if (!event.repeat) tabsActions.close(activeTabSurface);
+        if (!event.repeat) closeActiveRightPanelSurfaceStable();
       },
       // A focused side-panel or tab terminal takes the split/new/close chords before the drawer.
       "terminal.split": (context) => {
@@ -3753,6 +3756,7 @@ export default function ChatView(props: ChatViewProps) {
   const tabStrip =
     activeThreadRef && tabsState.surfaces.length > 0 ? (
       <SurfaceTabStrip
+        ref={threadTabStripRef}
         keybindings={keybindings}
         getShortcutContext={getShortcutContextStable}
         noDrag={false}
