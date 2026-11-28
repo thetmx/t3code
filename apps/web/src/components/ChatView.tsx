@@ -3070,10 +3070,13 @@ export default function ChatView(props: ChatViewProps) {
         : null;
   const rightPanelTabsRef = useRef<RightPanelTabsHandle>(null);
   const threadTabStripRef = useRef<RightPanelTabsHandle>(null);
-  // A selected range is an explicit target, so it wins over either strip's active tab.
+  // A selected range is an explicit target, so it wins over either strip's active tab;
+  // when both strips hold one, the focused strip's range goes first.
   const closeActiveRightPanelSurfaceStable = useStableCallback(() => {
-    if (rightPanelTabsRef.current?.closeSelectedTabs()) return;
-    if (threadTabStripRef.current?.closeSelectedTabs()) return;
+    const strips = document.activeElement?.closest("[data-thread-tabbar]")
+      ? [threadTabStripRef, rightPanelTabsRef]
+      : [rightPanelTabsRef, threadTabStripRef];
+    if (strips.some((strip) => strip.current?.closeSelectedTabs())) return;
     if (activeTabSurface) tabsActions.close(activeTabSurface);
     else if (activeRightPanelSurface) sideActions.close(activeRightPanelSurface);
   });
