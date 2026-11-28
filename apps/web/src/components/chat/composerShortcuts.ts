@@ -24,7 +24,15 @@ export function composerShortcutCommands(
     "composer.decreaseEffort": ({ event }) => {
       if (!event.repeat) composerRef.current?.stepReasoningEffort(-1);
     },
-    "composer.host": openControl(composerRef, "composer.host"),
+    // The palette only switches machines, so "Add to another machine" alone keeps the menu.
+    "composer.host": ({ event }) => {
+      if (event.repeat) return;
+      if (branchToolbarRef.current?.canPickEnvironment) {
+        branchToolbarRef.current.openEnvironmentPicker();
+      } else {
+        composerRef.current?.openControl("composer.host");
+      }
+    },
     "composer.effort": openControl(composerRef, "composer.effort"),
     "composer.mode": openControl(composerRef, "composer.mode"),
     "composer.workspace": ({ event }) => {
