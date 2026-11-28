@@ -15,7 +15,7 @@ To free a default shortcut, choose **Unassign** from its row menu (**Reset to de
 | Start thread in background  | `mod+Alt+Enter`   | Also `mod+Enter` in a new thread; opens a fresh draft immediately.                  |
 | Send first queued message   | `mod+Shift+Enter` | Steers if running, or starts a turn if stopped.                                     |
 | Pick model                  | `mod+shift+m`     | `mod+shift+up/down` switches providers inside the picker.                           |
-| Pick host / environment     | `mod+shift+h`     | Bind **Composer: Cycle Host** to step without a menu.                               |
+| Pick host / environment     | `mod+shift+h`     | Opens the palette on environments; bind **Composer: Cycle Host** to step instead.   |
 | Pick effort                 | `mod+shift+e`     | Bind **Increase/Decrease Effort** to step without a menu.                           |
 | Pick permissions            | `mod+shift+a`     |                                                                                     |
 | Pick workspace mode         | `mod+shift+x`     | Opens the palette on workspace choices; `mod+shift+l` reuses the previous worktree. |
